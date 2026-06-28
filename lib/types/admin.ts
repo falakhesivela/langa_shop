@@ -1,0 +1,94 @@
+export type ProductImageInput = {
+  url: string;
+  alt_text?: string | null;
+  sort_order: number;
+  is_primary: boolean;
+};
+
+export type AdminProduct = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  price_cents: number;
+  currency: string;
+  stock: number;
+  is_active: boolean;
+  category_id: number | null;
+  color: string | null;
+  badge: string | null;
+  materials: string | null;
+  details: string[];
+  sizes: string[];
+  created_at: string;
+  updated_at: string;
+  images: Array<{
+    id: number;
+    url: string;
+    alt_text: string | null;
+    sort_order: number;
+    is_primary: boolean;
+  }>;
+};
+
+export type ProductCreateInput = {
+  name: string;
+  slug: string;
+  description?: string | null;
+  price_cents: number;
+  currency?: string;
+  stock: number;
+  is_active?: boolean;
+  category_id?: number | null;
+  color?: string | null;
+  badge?: string | null;
+  materials?: string | null;
+  details?: string[];
+  sizes?: string[];
+  images?: ProductImageInput[];
+};
+
+export type ProductUpdateInput = Partial<ProductCreateInput>;
+
+export type CategoryInput = {
+  name: string;
+  slug: string;
+};
+
+export type PresignUploadResponse = {
+  upload_url: string;
+  public_url: string;
+  key: string;
+};
+
+export function adminProductToForm(product: AdminProduct) {
+  return {
+    name: product.name,
+    slug: product.slug,
+    description: product.description ?? "",
+    price: (product.price_cents / 100).toString(),
+    currency: product.currency,
+    stock: product.stock.toString(),
+    is_active: product.is_active,
+    category_id: product.category_id?.toString() ?? "",
+    color: product.color ?? "",
+    badge: product.badge ?? "",
+    materials: product.materials ?? "",
+    details: product.details.join("\n"),
+    sizes: product.sizes.join(", "),
+    images: product.images.map((image) => ({
+      url: image.url,
+      alt_text: image.alt_text,
+      sort_order: image.sort_order,
+      is_primary: image.is_primary,
+    })),
+  };
+}
+
+export function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
