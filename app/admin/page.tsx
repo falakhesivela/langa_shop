@@ -37,6 +37,15 @@ export default function AdminDashboardPage() {
             Review payments and update fulfillment status.
           </p>
         </Link>
+        <Link
+          href="/admin/users"
+          className="rounded-sm border border-border p-6 transition-colors hover:bg-muted"
+        >
+          <h2 className="font-serif text-2xl">Users</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Manage accounts and admin access.
+          </p>
+        </Link>
       </div>
 
       <div className="mt-8">

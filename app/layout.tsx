@@ -30,25 +30,21 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
+        url: "/favicon.svg",
         type: "image/svg+xml",
       },
+      {
+        url: "/favicon-32.png",
+        sizes: "32x32",
+      },
     ],
-    apple: "/apple-icon.png",
+    apple: "/apple-touch-icon-180.png",
   },
 };
 
 export const viewport: Viewport = {
   colorScheme: "light",
-  themeColor: "#f4f1ea",
+  themeColor: "#FAF6F0",
 };
 
 export default function RootLayout({

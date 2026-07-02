@@ -8,6 +8,7 @@ import type {
   ProductUpdateInput,
 } from "@/lib/types/admin";
 import type { AdminOrder, OrderStatus } from "@/lib/types/order";
+import type { User } from "@/lib/types/auth";
 
 export async function listAdminProducts(
   isActive?: boolean,
@@ -40,8 +41,10 @@ export async function updateProduct(
   });
 }
 
-export async function deleteProduct(id: number): Promise<void> {
-  return apiRequestWithAuth<void>(`/products/${id}`, {
+export async function deleteProduct(
+  id: number,
+): Promise<{ deactivated: boolean }> {
+  return apiRequestWithAuth<{ deactivated: boolean }>(`/products/${id}`, {
     method: "DELETE",
   });
 }
@@ -116,5 +119,19 @@ export async function updateAdminOrderStatus(
   return apiRequestWithAuth<AdminOrder>(`/admin/orders/${orderId}`, {
     method: "PATCH",
     body: { status },
+  });
+}
+
+export async function listAdminUsers(): Promise<User[]> {
+  return apiRequestWithAuth<User[]>("/admin/users");
+}
+
+export async function updateAdminUser(
+  userId: number,
+  input: { is_admin?: boolean; is_active?: boolean },
+): Promise<User> {
+  return apiRequestWithAuth<User>(`/admin/users/${userId}`, {
+    method: "PATCH",
+    body: input,
   });
 }

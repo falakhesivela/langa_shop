@@ -12,6 +12,7 @@ import { Alert } from "@/components/ui/Alert";
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   async function loadProducts() {
@@ -31,8 +32,15 @@ export default function AdminProductsPage() {
 
   async function handleDelete(id: number) {
     if (!window.confirm("Delete this product?")) return;
+    setError(null);
+    setNotice(null);
     try {
-      await deleteProduct(id);
+      const { deactivated } = await deleteProduct(id);
+      if (deactivated) {
+        setNotice(
+          "This product has existing orders, so it was archived (hidden from the storefront) instead of deleted.",
+        );
+      }
       await loadProducts();
     } catch (err) {
       setError(getErrorMessage(err, "Unable to delete product."));
@@ -52,6 +60,11 @@ export default function AdminProductsPage() {
       </div>
 
       {error ? <Alert className="mt-6">{error}</Alert> : null}
+      {notice ? (
+        <Alert variant="info" className="mt-6">
+          {notice}
+        </Alert>
+      ) : null}
 
       <div className="mt-8 overflow-x-auto">
         <table className="min-w-full text-left text-sm">

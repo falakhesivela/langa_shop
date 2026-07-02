@@ -10,13 +10,44 @@ import type { AdminOrder, OrderStatus } from "@/lib/types/order";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 
-const statusOptions: OrderStatus[] = [
-  "pending",
-  "paid",
-  "shipped",
-  "delivered",
-  "cancelled",
-];
+// Mirrors the backend's allowed status transitions.
+const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+  pending: ["paid", "cancelled"],
+  paid: ["shipped", "delivered", "cancelled"],
+  shipped: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: [],
+};
+
+const addressFieldLabels: Record<string, string> = {
+  full_name: "Name",
+  name: "Name",
+  phone: "Phone",
+  email: "Email",
+  line1: "Address",
+  line2: "Address 2",
+  address: "Address",
+  street: "Street",
+  city: "City",
+  state: "Province",
+  province: "Province",
+  postal_code: "Postal code",
+  zip: "Postal code",
+  country: "Country",
+};
+
+function humanizeKey(key: string): string {
+  return (
+    addressFieldLabels[key] ??
+    key.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+function formatAddressValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
 
 export default function AdminOrderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -96,7 +127,8 @@ export default function AdminOrderDetailPage() {
       {error ? <Alert className="mt-6">{error}</Alert> : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <section className="rounded-sm border border-border p-6">
+        <div className="space-y-6">
+          <section className="rounded-sm border border-border p-6">
           <h2 className="font-serif text-2xl">Items</h2>
           <ul className="mt-4 divide-y divide-border">
             {order.items.map((item) => (
@@ -114,7 +146,27 @@ export default function AdminOrderDetailPage() {
               </li>
             ))}
           </ul>
-        </section>
+          </section>
+
+          <section className="rounded-sm border border-border p-6">
+            <h2 className="font-serif text-2xl">Shipping address</h2>
+            {order.shipping_address &&
+            Object.keys(order.shipping_address).length > 0 ? (
+              <dl className="mt-4 space-y-3 text-sm">
+                {Object.entries(order.shipping_address).map(([key, value]) => (
+                  <div key={key} className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">{humanizeKey(key)}</dt>
+                    <dd className="text-right">{formatAddressValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                No shipping address was captured for this order.
+              </p>
+            )}
+          </section>
+        </div>
 
         <section className="rounded-sm border border-border p-6">
           <h2 className="font-serif text-2xl">Summary</h2>
@@ -146,27 +198,38 @@ export default function AdminOrderDetailPage() {
             >
               Update status
             </label>
-            <select
-              id="order-status"
-              value={selectedStatus}
-              onChange={(event) =>
-                setSelectedStatus(event.target.value as OrderStatus)
-              }
-              className="mt-2 w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
-            </select>
-            <Button
-              className="mt-4 w-full"
-              onClick={() => void handleSaveStatus()}
-              disabled={isSaving || selectedStatus === order.status}
-            >
-              {isSaving ? "Saving..." : "Save status"}
-            </Button>
+            {allowedTransitions[order.status].length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                This order is {order.status} and can no longer change status.
+              </p>
+            ) : (
+              <>
+                <select
+                  id="order-status"
+                  value={selectedStatus}
+                  onChange={(event) =>
+                    setSelectedStatus(event.target.value as OrderStatus)
+                  }
+                  className="mt-2 w-full rounded-sm border border-border bg-background px-3 py-2 text-sm"
+                >
+                  {[order.status, ...allowedTransitions[order.status]].map(
+                    (status) => (
+                      <option key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                        {status === order.status ? " (current)" : ""}
+                      </option>
+                    ),
+                  )}
+                </select>
+                <Button
+                  className="mt-4 w-full"
+                  onClick={() => void handleSaveStatus()}
+                  disabled={isSaving || selectedStatus === order.status}
+                >
+                  {isSaving ? "Saving..." : "Save status"}
+                </Button>
+              </>
+            )}
           </div>
         </section>
       </div>

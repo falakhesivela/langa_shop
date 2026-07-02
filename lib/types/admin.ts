@@ -20,6 +20,10 @@ export type AdminProduct = {
   materials: string | null;
   details: string[];
   sizes: string[];
+  weight_grams: number | null;
+  length_cm: number | null;
+  width_cm: number | null;
+  height_cm: number | null;
   created_at: string;
   updated_at: string;
   images: Array<{
@@ -45,6 +49,10 @@ export type ProductCreateInput = {
   materials?: string | null;
   details?: string[];
   sizes?: string[];
+  weight_grams?: number | null;
+  length_cm?: number | null;
+  width_cm?: number | null;
+  height_cm?: number | null;
   images?: ProductImageInput[];
 };
 

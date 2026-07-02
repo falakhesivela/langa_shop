@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { BrandLogo } from "@/components/brand-logo"
 import { APP_NAME } from "@/lib/config"
 
 const columns = [
@@ -22,7 +23,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="max-w-sm">
-            <p className="font-serif text-3xl tracking-[0.2em]">{APP_NAME.toUpperCase()}</p>
+            <BrandLogo className="h-32 w-auto" />
             <p className="mt-4 leading-relaxed text-muted-foreground">
               Considered clothing made from natural materials, designed to be worn for years rather than seasons.
             </p>

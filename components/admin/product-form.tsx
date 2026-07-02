@@ -45,6 +45,12 @@ export function ProductForm({ product }: ProductFormProps) {
   const [materials, setMaterials] = useState(product?.materials ?? "");
   const [details, setDetails] = useState(product?.details.join("\n") ?? "");
   const [sizes, setSizes] = useState(product?.sizes.join(", ") ?? "One Size");
+  const [weightGrams, setWeightGrams] = useState(
+    product?.weight_grams?.toString() ?? "",
+  );
+  const [lengthCm, setLengthCm] = useState(product?.length_cm?.toString() ?? "");
+  const [widthCm, setWidthCm] = useState(product?.width_cm?.toString() ?? "");
+  const [heightCm, setHeightCm] = useState(product?.height_cm?.toString() ?? "");
   const [images, setImages] = useState<ProductImageInput[]>(
     product?.images.map((image) => ({
       url: image.url,
@@ -91,6 +97,10 @@ export function ProductForm({ product }: ProductFormProps) {
         .split(",")
         .map((size) => size.trim())
         .filter(Boolean),
+      weight_grams: weightGrams ? Number(weightGrams) : null,
+      length_cm: lengthCm ? Number(lengthCm) : null,
+      width_cm: widthCm ? Number(widthCm) : null,
+      height_cm: heightCm ? Number(heightCm) : null,
       images,
     };
 
@@ -210,6 +220,58 @@ export function ProductForm({ product }: ProductFormProps) {
             rows={5}
             className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
           />
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-sm border border-border p-5">
+        <div>
+          <h3 className="font-serif text-lg">Shipping</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Used to calculate live Bob Go rates at checkout. Optional — a default
+            parcel size is used when left blank.
+          </p>
+        </div>
+        <div className="grid gap-5 md:grid-cols-4">
+          <div className="space-y-2">
+            <Label htmlFor="weight_grams">Weight (g)</Label>
+            <Input
+              id="weight_grams"
+              type="number"
+              min="0"
+              value={weightGrams}
+              onChange={(e) => setWeightGrams(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="length_cm">Length (cm)</Label>
+            <Input
+              id="length_cm"
+              type="number"
+              min="0"
+              value={lengthCm}
+              onChange={(e) => setLengthCm(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="width_cm">Width (cm)</Label>
+            <Input
+              id="width_cm"
+              type="number"
+              min="0"
+              value={widthCm}
+              onChange={(e) => setWidthCm(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="height_cm">Height (cm)</Label>
+            <Input
+              id="height_cm"
+              type="number"
+              min="0"
+              value={heightCm}
+              onChange={(e) => setHeightCm(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 

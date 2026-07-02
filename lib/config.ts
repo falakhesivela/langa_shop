@@ -1,4 +1,4 @@
-export const APP_NAME = "Khathalek";
+export const APP_NAME = "House of Noluhle";
 
 export const DEFAULT_CURRENCY = "ZAR";
 

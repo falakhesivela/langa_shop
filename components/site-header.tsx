@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Search, ShoppingBag, Menu, X, User } from "lucide-react"
 import { useCart } from "@/components/cart-context"
+import { BrandLogo } from "@/components/brand-logo"
 import { useAuth } from "@/lib/auth/context"
 import { APP_NAME } from "@/lib/config"
 
@@ -39,7 +40,7 @@ export function SiteHeader() {
         scrolled ? "border-b border-border bg-background/85 backdrop-blur-md" : "bg-transparent"
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 lg:px-8 lg:py-1">
         <div className="flex flex-1 items-center gap-6">
           <button
             onClick={() => setMenuOpen(true)}
@@ -61,11 +62,9 @@ export function SiteHeader() {
           </nav>
         </div>
 
-        <Link
-          href="/"
-          className="font-serif text-2xl font-medium tracking-[0.2em] lg:text-3xl"
-        >
-          {APP_NAME.toUpperCase()}
+        <Link href="/" aria-label={APP_NAME} className="flex items-center">
+          <BrandLogo variant="monogram" className="h-11 w-auto lg:hidden" />
+          <BrandLogo variant="wordmark" className="hidden w-auto lg:block lg:h-24" />
         </Link>
 
         <div className="flex flex-1 items-center justify-end gap-1">
@@ -110,7 +109,7 @@ export function SiteHeader() {
         }`}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <span className="font-serif text-lg tracking-[0.2em]">{APP_NAME.toUpperCase()}</span>
+          <BrandLogo className="h-16 w-auto" />
           <button
             onClick={() => setMenuOpen(false)}
             aria-label="Close menu"
