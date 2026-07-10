@@ -6,9 +6,11 @@ import { getErrorMessage } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/context";
 import type { User } from "@/lib/types/auth";
 import { Alert } from "@/components/ui/Alert";
+import { useToast } from "@/components/ui/Toast";
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,6 +45,11 @@ export default function AdminUsersPage() {
       setUsers((prev) =>
         prev.map((item) => (item.id === updated.id ? updated : item)),
       );
+      toast(
+        field === "is_admin"
+          ? `${updated.email} is ${updated.is_admin ? "now an admin" : "no longer an admin"}.`
+          : `${updated.email} is ${updated.is_active ? "active" : "disabled"}.`,
+      );
     } catch (err) {
       setError(getErrorMessage(err, "Unable to update user."));
     } finally {
@@ -53,7 +60,7 @@ export default function AdminUsersPage() {
   return (
     <div>
       <div>
-        <h1 className="font-serif text-4xl">Users</h1>
+        <h1 className="font-serif text-4xl">Customers</h1>
         <p className="mt-2 text-muted-foreground">
           Manage customer accounts and admin access.
         </p>

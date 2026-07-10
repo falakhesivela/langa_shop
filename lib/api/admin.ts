@@ -2,6 +2,7 @@ import { apiRequestWithAuth } from "@/lib/api/client";
 import type { Category, Promotion } from "@/lib/types/product";
 import type {
   AdminProduct,
+  AdminStats,
   CategoryInput,
   PresignUploadResponse,
   ProductCreateInput,
@@ -10,6 +11,10 @@ import type {
 } from "@/lib/types/admin";
 import type { AdminOrder, OrderStatus } from "@/lib/types/order";
 import type { User } from "@/lib/types/auth";
+
+export async function getAdminStats(): Promise<AdminStats> {
+  return apiRequestWithAuth<AdminStats>("/admin/stats");
+}
 
 export async function listAdminProducts(
   isActive?: boolean,

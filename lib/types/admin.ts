@@ -1,3 +1,5 @@
+import type { OrderStatus } from "@/lib/types/order";
+
 export type ProductImageInput = {
   url: string;
   alt_text?: string | null;
@@ -86,6 +88,57 @@ export type PresignUploadResponse = {
   upload_url: string;
   public_url: string;
   key: string;
+};
+
+export type AdminStats = {
+  revenue: {
+    today_cents: number;
+    last_7_days_cents: number;
+    last_30_days_cents: number;
+    all_time_cents: number;
+    currency: string;
+  };
+  orders: {
+    total: number;
+    today: number;
+    pending: number;
+    paid: number;
+    shipped: number;
+    delivered: number;
+    cancelled: number;
+  };
+  customers: {
+    total: number;
+    new_last_30_days: number;
+  };
+  catalog: {
+    active_products: number;
+    hidden_products: number;
+    out_of_stock: number;
+    low_stock: number;
+  };
+  low_stock_products: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    stock: number;
+    is_active: boolean;
+    image_url: string | null;
+  }>;
+  recent_orders: Array<{
+    id: number;
+    user_email: string;
+    total_cents: number;
+    status: OrderStatus;
+    item_count: number;
+    created_at: string;
+  }>;
+  top_products: Array<{
+    product_id: number | null;
+    name: string;
+    units_sold: number;
+    revenue_cents: number;
+  }>;
 };
 
 export function adminProductToForm(product: AdminProduct) {

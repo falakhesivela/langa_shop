@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { useToast } from "@/components/ui/Toast";
 
 const PLACEMENTS: { value: PromotionPlacement; label: string; hint: string }[] =
   [
@@ -66,6 +67,7 @@ const emptyForm = {
 };
 
 export function PromotionManager() {
+  const { toast } = useToast();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -135,8 +137,10 @@ export function PromotionManager() {
     try {
       if (editingId != null) {
         await updatePromotion(editingId, payload);
+        toast("Promotion updated.");
       } else {
         await createPromotion(payload);
+        toast("Promotion created.");
       }
       resetForm();
       await loadPromotions();
@@ -152,6 +156,7 @@ export function PromotionManager() {
     setError(null);
     try {
       await deletePromotion(id);
+      toast("Promotion deleted.");
       if (editingId === id) resetForm();
       await loadPromotions();
     } catch (err) {

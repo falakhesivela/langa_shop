@@ -14,6 +14,8 @@ import { ColorSwatch } from "@/components/color-swatch";
 import type { AdminOrder, OrderStatus } from "@/lib/types/order";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { OrderStatusBadge } from "@/components/admin/status-badge";
+import { useToast } from "@/components/ui/Toast";
 
 // Mirrors the backend's allowed status transitions.
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
@@ -56,6 +58,7 @@ function formatAddressValue(value: unknown): string {
 
 export default function AdminOrderDetailPage() {
   const params = useParams<{ id: string }>();
+  const { toast } = useToast();
   const orderId = Number(params.id);
   const [order, setOrder] = useState<AdminOrder | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>("pending");
@@ -93,6 +96,7 @@ export default function AdminOrderDetailPage() {
     try {
       const updated = await createAdminShipment(order.id);
       setOrder(updated);
+      toast("Shipment created.");
     } catch (err) {
       setError(getErrorMessage(err, "Unable to create shipment."));
     } finally {
@@ -108,6 +112,7 @@ export default function AdminOrderDetailPage() {
       const updated = await updateAdminOrderStatus(order.id, selectedStatus);
       setOrder(updated);
       setError(null);
+      toast(`Order marked as ${updated.status}.`);
     } catch (err) {
       setError(getErrorMessage(err, "Unable to update order status."));
     } finally {
@@ -139,7 +144,10 @@ export default function AdminOrderDetailPage() {
         Back to orders
       </Link>
 
-      <h1 className="mt-6 font-serif text-4xl">Order #{order.id}</h1>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <h1 className="font-serif text-4xl">Order #{order.id}</h1>
+        <OrderStatusBadge status={order.status} />
+      </div>
       <p className="mt-2 text-muted-foreground">
         {order.user_email} · {new Date(order.created_at).toLocaleString()}
       </p>
@@ -212,7 +220,9 @@ export default function AdminOrderDetailPage() {
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Status</dt>
-              <dd className="capitalize">{order.status}</dd>
+              <dd>
+                <OrderStatusBadge status={order.status} />
+              </dd>
             </div>
             {order.paystack_reference ? (
               <div>

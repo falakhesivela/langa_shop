@@ -12,14 +12,15 @@ import { resolveMediaUrl } from "@/lib/media";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 type StatusFilter = "all" | "active" | "hidden";
 
 export default function AdminProductsPage() {
+  const { toast } = useToast();
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -72,13 +73,15 @@ export default function AdminProductsPage() {
   async function handleDelete(id: number) {
     if (!window.confirm("Delete this product?")) return;
     setError(null);
-    setNotice(null);
     try {
       const { deactivated } = await deleteProduct(id);
       if (deactivated) {
-        setNotice(
-          "This product has existing orders, so it was archived (hidden from the storefront) instead of deleted.",
+        toast(
+          "This product has existing orders, so it was archived instead of deleted.",
+          "info",
         );
+      } else {
+        toast("Product deleted.");
       }
       await loadProducts();
     } catch (err) {
@@ -105,11 +108,6 @@ export default function AdminProductsPage() {
       </div>
 
       {error ? <Alert className="mt-6">{error}</Alert> : null}
-      {notice ? (
-        <Alert variant="info" className="mt-6">
-          {notice}
-        </Alert>
-      ) : null}
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input

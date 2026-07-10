@@ -1,5 +1,6 @@
 import { AdminGuard } from "@/components/auth/AdminGuard";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export default function AdminLayout({
   children,
@@ -8,7 +9,9 @@ export default function AdminLayout({
 }) {
   return (
     <AdminGuard>
-      <AdminShell>{children}</AdminShell>
+      <ToastProvider>
+        <AdminShell>{children}</AdminShell>
+      </ToastProvider>
     </AdminGuard>
   );
 }

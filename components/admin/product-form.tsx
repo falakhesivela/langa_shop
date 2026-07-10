@@ -17,6 +17,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { useToast } from "@/components/ui/Toast";
 import type { Category } from "@/lib/types/product";
 import { buildVariantCombos } from "@/lib/stock";
 import { ColorSwatch } from "@/components/color-swatch";
@@ -36,6 +37,7 @@ function parseSizes(value: string): string[] {
 
 export function ProductForm({ product }: ProductFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const isEditing = Boolean(product);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -171,11 +173,12 @@ export function ProductForm({ product }: ProductFormProps) {
     try {
       if (isEditing && product) {
         await updateProduct(product.id, payload);
-        router.push("/admin/products");
+        toast("Product updated.");
       } else {
         await createProduct(payload);
-        router.push("/admin/products");
+        toast("Product created.");
       }
+      router.push("/admin/products");
     } catch (err) {
       setError(getErrorMessage(err, "Unable to save product."));
       setIsSubmitting(false);

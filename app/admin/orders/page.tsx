@@ -7,6 +7,7 @@ import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
 import type { AdminOrder, OrderStatus } from "@/lib/types/order";
 import { Alert } from "@/components/ui/Alert";
+import { OrderStatusBadge } from "@/components/admin/status-badge";
 
 const statusFilters: Array<{ label: string; value?: OrderStatus }> = [
   { label: "All" },
@@ -108,7 +109,9 @@ export default function AdminOrdersPage() {
                   <td className="px-3 py-4">
                     {formatPrice(order.total_cents / 100)}
                   </td>
-                  <td className="px-3 py-4 capitalize">{order.status}</td>
+                  <td className="px-3 py-4">
+                    <OrderStatusBadge status={order.status} />
+                  </td>
                   <td className="px-3 py-4">
                     {new Date(order.created_at).toLocaleString()}
                   </td>

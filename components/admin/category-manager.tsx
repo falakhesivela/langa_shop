@@ -14,8 +14,10 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { useToast } from "@/components/ui/Toast";
 
 export function CategoryManager() {
+  const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -42,6 +44,7 @@ export function CategoryManager() {
 
     try {
       await createCategory({ name, slug });
+      toast("Category created.");
       setName("");
       setSlug("");
       await loadCategories();
@@ -59,6 +62,7 @@ export function CategoryManager() {
         name: category.name,
         slug: category.slug,
       });
+      toast("Category updated.");
       await loadCategories();
     } catch (err) {
       setError(getErrorMessage(err, "Unable to update category."));
@@ -70,6 +74,7 @@ export function CategoryManager() {
     setError(null);
     try {
       await deleteCategory(id);
+      toast("Category deleted.");
       await loadCategories();
     } catch (err) {
       setError(getErrorMessage(err, "Unable to delete category."));
