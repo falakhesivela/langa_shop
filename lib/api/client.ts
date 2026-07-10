@@ -23,15 +23,14 @@ function fetchWithTimeout(
   init: RequestInit,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<Response> {
-  if (typeof window === "undefined") {
-    return fetch(url, init);
-  }
-
+  // Always abort — including during `next build` / SSR. Without this, a
+  // unreachable API (missing NEXT_PUBLIC_API_URL → localhost, cold backend)
+  // hangs until Vercel's 60s static-generation timeout.
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   return fetch(url, { ...init, signal: controller.signal }).finally(() => {
-    window.clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
   });
 }
 
