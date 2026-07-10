@@ -22,6 +22,8 @@ export type Order = {
   currency: string;
   paystack_reference: string | null;
   shipping_address: Record<string, unknown> | null;
+  discount_code: string | null;
+  discount_cents: number;
   shipping_cents: number;
   shipping_service_code: string | null;
   shipping_service_name: string | null;
@@ -37,6 +39,11 @@ export type Order = {
 export type AdminOrder = Order & {
   user_id: number;
   user_email: string;
+};
+
+export type AdminOrderList = {
+  items: AdminOrder[];
+  total: number;
 };
 
 export type GuestCartItemInput = {

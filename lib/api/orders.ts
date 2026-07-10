@@ -10,6 +10,7 @@ import type { ShippingAddress } from "@/lib/types/shipping";
 export type CheckoutInput = {
   shipping_address?: ShippingAddress;
   shipping_rate_id?: string;
+  discount_code?: string;
 };
 
 export type GuestCheckoutInput = CheckoutInput & {

@@ -4,12 +4,14 @@ import type {
   AdminProduct,
   AdminStats,
   CategoryInput,
+  DiscountCode,
+  DiscountCodeInput,
   PresignUploadResponse,
   ProductCreateInput,
   ProductUpdateInput,
   PromotionInput,
 } from "@/lib/types/admin";
-import type { AdminOrder, OrderStatus } from "@/lib/types/order";
+import type { AdminOrder, AdminOrderList, OrderStatus } from "@/lib/types/order";
 import type { User } from "@/lib/types/auth";
 
 export async function getAdminStats(): Promise<AdminStats> {
@@ -111,6 +113,35 @@ export async function deletePromotion(id: number): Promise<void> {
   });
 }
 
+export async function listDiscounts(): Promise<DiscountCode[]> {
+  return apiRequestWithAuth<DiscountCode[]>("/admin/discounts");
+}
+
+export async function createDiscount(
+  input: DiscountCodeInput,
+): Promise<DiscountCode> {
+  return apiRequestWithAuth<DiscountCode>("/admin/discounts", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function updateDiscount(
+  id: number,
+  input: Partial<DiscountCodeInput>,
+): Promise<DiscountCode> {
+  return apiRequestWithAuth<DiscountCode>(`/admin/discounts/${id}`, {
+    method: "PUT",
+    body: input,
+  });
+}
+
+export async function deleteDiscount(id: number): Promise<void> {
+  return apiRequestWithAuth<void>(`/admin/discounts/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function presignUpload(
   filename: string,
   contentType: string,
@@ -150,11 +181,36 @@ export async function uploadFileToR2(file: File): Promise<string> {
   return presigned.public_url;
 }
 
+export type AdminOrderQuery = {
+  status?: OrderStatus;
+  q?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+};
+
 export async function listAdminOrders(
-  status?: OrderStatus,
-): Promise<AdminOrder[]> {
-  const query = status ? `?status=${status}` : "";
-  return apiRequestWithAuth<AdminOrder[]>(`/admin/orders${query}`);
+  query: AdminOrderQuery = {},
+): Promise<AdminOrderList> {
+  const params = new URLSearchParams();
+  if (query.status) params.set("status", query.status);
+  if (query.q) params.set("q", query.q);
+  if (query.dateFrom) params.set("date_from", query.dateFrom);
+  if (query.dateTo) params.set("date_to", query.dateTo);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+  return apiRequestWithAuth<AdminOrderList>(`/admin/orders${suffix}`);
+}
+
+export async function resendOrderConfirmation(
+  orderId: number,
+): Promise<{ sent: boolean }> {
+  return apiRequestWithAuth<{ sent: boolean }>(
+    `/admin/orders/${orderId}/resend-confirmation`,
+    { method: "POST" },
+  );
 }
 
 export async function getAdminOrder(orderId: number): Promise<AdminOrder> {
@@ -179,6 +235,19 @@ export async function createAdminShipment(orderId: number): Promise<AdminOrder> 
 
 export async function listAdminUsers(): Promise<User[]> {
   return apiRequestWithAuth<User[]>("/admin/users");
+}
+
+export type AdminCustomerDetail = {
+  user: User;
+  order_count: number;
+  total_spent_cents: number;
+  orders: AdminOrder[];
+};
+
+export async function getAdminCustomer(
+  userId: number,
+): Promise<AdminCustomerDetail> {
+  return apiRequestWithAuth<AdminCustomerDetail>(`/admin/users/${userId}`);
 }
 
 export async function updateAdminUser(

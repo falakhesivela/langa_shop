@@ -6,8 +6,10 @@ import { useParams } from "next/navigation";
 import {
   createAdminShipment,
   getAdminOrder,
+  resendOrderConfirmation,
   updateAdminOrderStatus,
 } from "@/lib/api/admin";
+import { APP_NAME } from "@/lib/config";
 import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
 import { ColorSwatch } from "@/components/color-swatch";
@@ -66,6 +68,7 @@ export default function AdminOrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isShipping, setIsShipping] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -104,6 +107,23 @@ export default function AdminOrderDetailPage() {
     }
   }
 
+  async function handleResendConfirmation() {
+    if (!order) return;
+    setIsResending(true);
+    try {
+      const { sent } = await resendOrderConfirmation(order.id);
+      if (sent) {
+        toast(`Confirmation email sent to ${order.user_email}.`);
+      } else {
+        toast("The email could not be sent. Check the server logs.", "error");
+      }
+    } catch (err) {
+      toast(getErrorMessage(err, "Unable to resend confirmation."), "error");
+    } finally {
+      setIsResending(false);
+    }
+  }
+
   async function handleSaveStatus() {
     if (!order) return;
 
@@ -137,6 +157,7 @@ export default function AdminOrderDetailPage() {
 
   return (
     <div>
+      <div className="print:hidden">
       <Link
         href="/admin/orders"
         className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
@@ -144,9 +165,28 @@ export default function AdminOrderDetailPage() {
         Back to orders
       </Link>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <h1 className="font-serif text-4xl">Order #{order.id}</h1>
-        <OrderStatusBadge status={order.status} />
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-serif text-4xl">Order #{order.id}</h1>
+          <OrderStatusBadge status={order.status} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => window.print()}
+          >
+            Print packing slip
+          </Button>
+          {order.status !== "pending" && order.status !== "cancelled" ? (
+            <Button
+              variant="secondary"
+              onClick={() => void handleResendConfirmation()}
+              disabled={isResending}
+            >
+              {isResending ? "Sending..." : "Resend confirmation"}
+            </Button>
+          ) : null}
+        </div>
       </div>
       <p className="mt-2 text-muted-foreground">
         {order.user_email} · {new Date(order.created_at).toLocaleString()}
@@ -211,8 +251,31 @@ export default function AdminOrderDetailPage() {
           <h2 className="font-serif text-2xl">Summary</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Subtotal</dt>
+              <dd>
+                {formatPrice(
+                  (order.total_cents -
+                    order.shipping_cents +
+                    (order.discount_cents ?? 0)) /
+                    100,
+                )}
+              </dd>
+            </div>
+            {order.discount_cents > 0 ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">
+                  Discount{order.discount_code ? ` (${order.discount_code})` : ""}
+                </dt>
+                <dd>−{formatPrice(order.discount_cents / 100)}</dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Shipping</dt>
+              <dd>{formatPrice(order.shipping_cents / 100)}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-border pt-3">
               <dt className="text-muted-foreground">Total</dt>
-              <dd>{formatPrice(order.total_cents / 100)}</dd>
+              <dd className="font-medium">{formatPrice(order.total_cents / 100)}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Currency</dt>
@@ -331,6 +394,73 @@ export default function AdminOrderDetailPage() {
           </div>
         </section>
       </div>
+      </div>
+
+      {/* Packing slip — only visible when printing */}
+      <section className="hidden print:block">
+        <div className="flex items-start justify-between border-b border-black pb-4">
+          <div>
+            <p className="font-serif text-2xl tracking-[0.2em]">
+              {APP_NAME.toUpperCase()}
+            </p>
+            <p className="mt-1 text-sm">Packing slip</p>
+          </div>
+          <div className="text-right text-sm">
+            <p className="font-medium">Order #{order.id}</p>
+            <p>{new Date(order.created_at).toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-6 text-sm">
+          <div>
+            <p className="font-medium uppercase tracking-wide">Ship to</p>
+            {order.shipping_address &&
+            Object.keys(order.shipping_address).length > 0 ? (
+              <div className="mt-2 space-y-1">
+                {Object.entries(order.shipping_address).map(([key, value]) => (
+                  <p key={key}>
+                    <span className="text-neutral-600">{humanizeKey(key)}: </span>
+                    {formatAddressValue(value)}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2">No address on file</p>
+            )}
+            <p className="mt-2">{order.user_email}</p>
+          </div>
+          <div>
+            <p className="font-medium uppercase tracking-wide">Delivery</p>
+            <p className="mt-2">{order.shipping_service_name ?? "—"}</p>
+            {order.tracking_reference ? (
+              <p>Tracking: {order.tracking_reference}</p>
+            ) : null}
+          </div>
+        </div>
+
+        <table className="mt-8 w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-black">
+              <th className="py-2 font-medium">Item</th>
+              <th className="py-2 font-medium">Size</th>
+              <th className="py-2 font-medium">Color</th>
+              <th className="py-2 text-right font-medium">Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.items.map((item) => (
+              <tr key={item.id} className="border-b border-neutral-300">
+                <td className="py-2">{item.product_name}</td>
+                <td className="py-2">{item.size}</td>
+                <td className="py-2">{item.color ?? "—"}</td>
+                <td className="py-2 text-right">{item.quantity}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="mt-8 text-sm">Thank you for shopping with {APP_NAME}.</p>
+      </section>
     </div>
   );
 }

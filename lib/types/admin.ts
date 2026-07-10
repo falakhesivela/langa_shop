@@ -90,6 +90,34 @@ export type PresignUploadResponse = {
   key: string;
 };
 
+export type DiscountCode = {
+  id: number;
+  code: string;
+  description: string | null;
+  discount_type: "percent" | "fixed";
+  value: number;
+  min_subtotal_cents: number;
+  max_uses: number | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  times_used: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DiscountCodeInput = {
+  code: string;
+  description?: string | null;
+  discount_type: "percent" | "fixed";
+  value: number;
+  min_subtotal_cents?: number;
+  max_uses?: number | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  is_active?: boolean;
+};
+
 export type AdminStats = {
   revenue: {
     today_cents: number;

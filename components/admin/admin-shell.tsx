@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   Store,
   Tags,
+  Ticket,
   Users,
   X,
 } from "lucide-react";
@@ -40,7 +41,10 @@ const navSections = [
   },
   {
     title: "Marketing",
-    links: [{ href: "/admin/promotions", label: "Promotions", icon: Megaphone }],
+    links: [
+      { href: "/admin/promotions", label: "Promotions", icon: Megaphone },
+      { href: "/admin/discounts", label: "Discount codes", icon: Ticket },
+    ],
   },
 ];
 
@@ -134,7 +138,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background lg:flex">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-card lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-card lg:flex print:hidden!">
         <div className="border-b border-border px-6 py-5">
           <Link href="/admin" className="font-serif text-lg tracking-[0.2em]">
             {APP_NAME.toUpperCase()}
@@ -148,7 +152,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:hidden print:hidden">
         <Link href="/admin" className="font-serif text-lg tracking-[0.2em]">
           {APP_NAME.toUpperCase()} <span className="text-sm">Admin</span>
         </Link>
@@ -199,7 +203,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       ) : null}
 
-      <main className="min-w-0 flex-1 px-5 py-8 lg:ml-60 lg:px-10">
+      <main className="min-w-0 flex-1 px-5 py-8 lg:ml-60 lg:px-10 print:ml-0! print:p-0!">
         <div className="mx-auto max-w-6xl">{children}</div>
       </main>
     </div>

@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { deleteProduct, listAdminProducts, listCategories } from "@/lib/api/admin";
+import {
+  deleteProduct,
+  listAdminProducts,
+  listCategories,
+  updateProduct,
+} from "@/lib/api/admin";
 import type { AdminProduct } from "@/lib/types/admin";
 import type { Category } from "@/lib/types/product";
 import { formatPrice } from "@/lib/products";
@@ -15,6 +20,13 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 
 type StatusFilter = "all" | "active" | "hidden";
+type StockFilter = "all" | "low" | "out";
+
+const LOW_STOCK_THRESHOLD = 5;
+
+function hasVariantStock(product: AdminProduct): boolean {
+  return Object.keys(product.variant_stock ?? {}).length > 0;
+}
 
 export default function AdminProductsPage() {
   const { toast } = useToast();
@@ -24,6 +36,10 @@ export default function AdminProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [editingStockId, setEditingStockId] = useState<number | null>(null);
+  const [stockDraft, setStockDraft] = useState("");
+  const [isSavingStock, setIsSavingStock] = useState(false);
 
   async function loadProducts() {
     setIsLoading(true);
@@ -58,6 +74,12 @@ export default function AdminProductsPage() {
     return products.filter((product) => {
       if (statusFilter === "active" && !product.is_active) return false;
       if (statusFilter === "hidden" && product.is_active) return false;
+      if (stockFilter === "out" && product.stock !== 0) return false;
+      if (
+        stockFilter === "low" &&
+        (product.stock === 0 || product.stock > LOW_STOCK_THRESHOLD)
+      )
+        return false;
       if (!q) return true;
       const categoryName = product.category_id
         ? categoryNameById.get(product.category_id) ?? ""
@@ -68,7 +90,30 @@ export default function AdminProductsPage() {
         categoryName.toLowerCase().includes(q)
       );
     });
-  }, [products, search, statusFilter, categoryNameById]);
+  }, [products, search, statusFilter, stockFilter, categoryNameById]);
+
+  function startStockEdit(product: AdminProduct) {
+    setEditingStockId(product.id);
+    setStockDraft(String(product.stock));
+  }
+
+  async function saveStockEdit(product: AdminProduct) {
+    const next = Math.max(0, Math.floor(Number(stockDraft)));
+    if (!Number.isFinite(next)) return;
+    setIsSavingStock(true);
+    try {
+      const updated = await updateProduct(product.id, { stock: next });
+      setProducts((prev) =>
+        prev.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setEditingStockId(null);
+      toast(`Stock for ${product.name} set to ${next}.`);
+    } catch (err) {
+      toast(getErrorMessage(err, "Unable to update stock."), "error");
+    } finally {
+      setIsSavingStock(false);
+    }
+  }
 
   async function handleDelete(id: number) {
     if (!window.confirm("Delete this product?")) return;
@@ -118,7 +163,7 @@ export default function AdminProductsPage() {
           className="sm:max-w-sm"
           aria-label="Search products"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(
             [
               ["all", "All"],
@@ -132,6 +177,27 @@ export default function AdminProductsPage() {
               onClick={() => setStatusFilter(value)}
               className={`rounded-sm border px-3 py-1.5 text-sm transition-colors ${
                 statusFilter === value
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+          {(
+            [
+              ["all", "All stock"],
+              ["low", "Low stock"],
+              ["out", "Out of stock"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setStockFilter(value)}
+              className={`rounded-sm border px-3 py-1.5 text-sm transition-colors ${
+                stockFilter === value
                   ? "border-foreground bg-foreground text-background"
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
@@ -212,7 +278,74 @@ export default function AdminProductsPage() {
                       </div>
                     ) : null}
                   </td>
-                  <td className="px-3 py-4">{product.stock}</td>
+                  <td className="px-3 py-4">
+                    {editingStockId === product.id ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={stockDraft}
+                          onChange={(e) => setStockDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void saveStockEdit(product);
+                            }
+                            if (e.key === "Escape") setEditingStockId(null);
+                          }}
+                          className="h-9 w-20"
+                          autoFocus
+                          aria-label={`Stock for ${product.name}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void saveStockEdit(product)}
+                          disabled={isSavingStock}
+                          className="text-sm underline-offset-4 hover:underline disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingStockId(null)}
+                          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={
+                            product.stock === 0
+                              ? "font-medium text-red-600 dark:text-red-400"
+                              : product.stock <= LOW_STOCK_THRESHOLD
+                                ? "font-medium text-amber-700 dark:text-amber-400"
+                                : ""
+                          }
+                        >
+                          {product.stock === 0 ? "Out" : product.stock}
+                        </span>
+                        {hasVariantStock(product) ? (
+                          <Link
+                            href={`/admin/products/${product.id}/edit`}
+                            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                            title="Stock is tracked per variant — edit the product to adjust"
+                          >
+                            by variant
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startStockEdit(product)}
+                            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-3 py-4">
                     {product.is_active ? "Active" : "Hidden"}
                   </td>

@@ -10,6 +10,7 @@ import {
   getShippingRates,
 } from "@/lib/api/shipping";
 import { checkout, guestCheckout } from "@/lib/api/orders";
+import { validateDiscount, type DiscountValidation } from "@/lib/api/discounts";
 import { setGuestCheckoutEmail } from "@/lib/cart/guest-cart";
 import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
@@ -47,6 +48,11 @@ export default function CheckoutPage() {
   const [ratesError, setRatesError] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [discountInput, setDiscountInput] = useState("");
+  const [appliedDiscount, setAppliedDiscount] =
+    useState<DiscountValidation | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
 
   useEffect(() => {
     void getShippingConfig()
@@ -60,6 +66,36 @@ export default function CheckoutPage() {
   );
   const selectedRate = rates.find((r) => r.id === selectedCode) ?? null;
   const shippingRand = selectedRate ? selectedRate.price_cents / 100 : 0;
+
+  // Recompute the discount for the current subtotal so it stays right even if
+  // the cart changed after the code was applied. The server re-validates at pay.
+  const discountRand = appliedDiscount
+    ? appliedDiscount.discount_type === "percent"
+      ? Math.min(subtotal, (subtotal * appliedDiscount.value) / 100)
+      : Math.min(subtotal, appliedDiscount.value / 100)
+    : 0;
+  const totalRand = Math.max(0, subtotal - discountRand) + shippingRand;
+
+  async function handleApplyDiscount() {
+    const code = discountInput.trim();
+    if (!code) return;
+    setDiscountError(null);
+    setIsApplyingDiscount(true);
+    try {
+      const result = await validateDiscount(code, Math.round(subtotal * 100));
+      setAppliedDiscount(result);
+      setDiscountInput("");
+    } catch (err) {
+      setDiscountError(getErrorMessage(err, "Unable to apply this code."));
+    } finally {
+      setIsApplyingDiscount(false);
+    }
+  }
+
+  function removeDiscount() {
+    setAppliedDiscount(null);
+    setDiscountError(null);
+  }
 
   function updateField(key: keyof typeof emptyAddress, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -160,12 +196,14 @@ export default function CheckoutPage() {
         ? await checkout({
             shipping_address: buildAddress(),
             shipping_rate_id: selectedCode ?? undefined,
+            discount_code: appliedDiscount?.code,
           })
         : await guestCheckout({
             email: guestEmail.trim(),
             full_name: form.full_name || undefined,
             shipping_address: buildAddress(),
             shipping_rate_id: selectedCode ?? undefined,
+            discount_code: appliedDiscount?.code,
             items: items.map((i) => ({
               product_id: i.productId,
               size: i.size,
@@ -356,18 +394,76 @@ export default function CheckoutPage() {
               </li>
             ))}
           </ul>
+          <div className="space-y-3 border-t border-border pt-4">
+            {appliedDiscount ? (
+              <div className="flex items-center justify-between gap-3 rounded-sm border border-border bg-muted/40 px-3 py-2 text-sm">
+                <span>
+                  Code <span className="font-mono font-medium">{appliedDiscount.code}</span>{" "}
+                  applied
+                </span>
+                <button
+                  type="button"
+                  onClick={removeDiscount}
+                  className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  value={discountInput}
+                  onChange={(e) => {
+                    setDiscountInput(e.target.value.toUpperCase());
+                    setDiscountError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleApplyDiscount();
+                    }
+                  }}
+                  placeholder="Discount code"
+                  aria-label="Discount code"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleApplyDiscount()}
+                  disabled={isApplyingDiscount || !discountInput.trim()}
+                >
+                  {isApplyingDiscount ? "..." : "Apply"}
+                </Button>
+              </div>
+            )}
+            {discountError ? (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {discountError}
+              </p>
+            ) : null}
+          </div>
+
           <div className="space-y-2 border-t border-border pt-4 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
+            {appliedDiscount ? (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Discount ({appliedDiscount.code})
+                </span>
+                <span>−{formatPrice(discountRand)}</span>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Shipping</span>
               <span>{selectedRate ? formatPrice(shippingRand) : "—"}</span>
             </div>
             <div className="flex justify-between border-t border-border pt-2 text-base font-medium">
               <span>Total</span>
-              <span>{formatPrice(subtotal + shippingRand)}</span>
+              <span>{formatPrice(totalRand)}</span>
             </div>
           </div>
 
@@ -382,7 +478,7 @@ export default function CheckoutPage() {
               (!isAuthenticated && (!emailValid || !guestDetailsComplete))
             }
           >
-            Pay {formatPrice(subtotal + shippingRand)}
+            Pay {formatPrice(totalRand)}
           </Button>
         </aside>
       </div>

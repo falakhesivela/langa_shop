@@ -1,20 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { listAdminUsers, updateAdminUser } from "@/lib/api/admin";
 import { getErrorMessage } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/context";
 import type { User } from "@/lib/types/auth";
 import { Alert } from "@/components/ui/Alert";
+import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
+  const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (user) =>
+        user.email.toLowerCase().includes(q) ||
+        (user.full_name ?? "").toLowerCase().includes(q),
+    );
+  }, [users, search]);
 
   async function loadUsers() {
     setIsLoading(true);
@@ -68,7 +81,18 @@ export default function AdminUsersPage() {
 
       {error ? <Alert className="mt-6">{error}</Alert> : null}
 
-      <div className="mt-8 overflow-x-auto">
+      <div className="mt-6">
+        <Input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by email or name…"
+          className="sm:max-w-sm"
+          aria-label="Search customers"
+        />
+      </div>
+
+      <div className="mt-6 overflow-x-auto">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-border text-muted-foreground">
             <tr>
@@ -86,20 +110,27 @@ export default function AdminUsersPage() {
                   Loading users...
                 </td>
               </tr>
-            ) : users.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-muted-foreground">
-                  No users found.
+                  {users.length === 0
+                    ? "No customers yet."
+                    : "No customers match your search."}
                 </td>
               </tr>
             ) : (
-              users.map((user) => {
+              filtered.map((user) => {
                 const isSelf = user.id === currentUser?.id;
                 const isSaving = savingId === user.id;
                 return (
                   <tr key={user.id} className="border-b border-border">
                     <td className="px-3 py-4">
-                      <div className="font-medium">{user.email}</div>
+                      <Link
+                        href={`/admin/users/${user.id}`}
+                        className="font-medium underline-offset-4 hover:underline"
+                      >
+                        {user.email}
+                      </Link>
                       {isSelf ? (
                         <div className="text-muted-foreground">You</div>
                       ) : null}
