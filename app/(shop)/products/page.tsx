@@ -4,7 +4,7 @@ import { ProductsBrowser } from "@/components/products-browser";
 
 export const metadata: Metadata = {
   title: `Shop All`,
-  description: "Browse the full collection of natural-fibre essentials.",
+  description: "Browse the full NewFit collection of women's fashion.",
 };
 
 export default function ProductsPage() {
@@ -14,7 +14,7 @@ export default function ProductsPage() {
         <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">The collection</p>
         <h1 className="mt-3 font-serif text-5xl md:text-6xl">Shop All</h1>
         <p className="mt-4 leading-relaxed text-muted-foreground">
-          A focused wardrobe of natural-fibre essentials — tailored, knitted and finished to last.
+          Fresh women's fits — dresses, tops, sets, and street style ready to add to cart.
         </p>
       </header>
 

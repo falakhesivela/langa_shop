@@ -29,6 +29,15 @@ export default function AdminDashboardPage() {
           </p>
         </Link>
         <Link
+          href="/admin/promotions"
+          className="rounded-sm border border-border p-6 transition-colors hover:bg-muted"
+        >
+          <h2 className="font-serif text-2xl">Promotions</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Announcement bars, campaigns, and sale messaging.
+          </p>
+        </Link>
+        <Link
           href="/admin/orders"
           className="rounded-sm border border-border p-6 transition-colors hover:bg-muted"
         >

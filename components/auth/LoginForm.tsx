@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, Suspense } from "react";
 import { getErrorMessage } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/context";
+import { getPostLoginPath } from "@/lib/auth/routes";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -25,9 +26,8 @@ export function LoginForm() {
     setIsSubmitting(true);
 
     try {
-      await login({ email, password });
-      const next = searchParams.get("next");
-      router.push(next && next.startsWith("/") ? next : "/account");
+      const user = await login({ email, password });
+      router.push(getPostLoginPath(user, searchParams.get("next")));
     } catch (submitError) {
       setError(getErrorMessage(submitError, "Unable to sign in."));
     } finally {

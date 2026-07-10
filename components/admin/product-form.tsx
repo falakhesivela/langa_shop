@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createProduct,
@@ -12,17 +12,27 @@ import type { AdminProduct, ProductImageInput } from "@/lib/types/admin";
 import { slugify } from "@/lib/types/admin";
 import { DEFAULT_CURRENCY } from "@/lib/config";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import { ColorPicker } from "@/components/admin/color-picker";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import type { Category } from "@/lib/types/product";
+import { buildVariantCombos } from "@/lib/stock";
+import { ColorSwatch } from "@/components/color-swatch";
 
 type ProductFormProps = {
   product?: AdminProduct;
 };
 
 const badgeOptions = ["", "New", "Bestseller", "Limited"];
+
+function parseSizes(value: string): string[] {
+  return value
+    .split(",")
+    .map((size) => size.trim())
+    .filter(Boolean);
+}
 
 export function ProductForm({ product }: ProductFormProps) {
   const router = useRouter();
@@ -35,12 +45,27 @@ export function ProductForm({ product }: ProductFormProps) {
   const [price, setPrice] = useState(
     product ? (product.price_cents / 100).toString() : "",
   );
+  const [salePrice, setSalePrice] = useState(
+    product?.sale_price_cents != null
+      ? (product.sale_price_cents / 100).toString()
+      : "",
+  );
   const [stock, setStock] = useState(product?.stock.toString() ?? "0");
+  const [variantStock, setVariantStock] = useState<Record<string, string>>(
+    () => {
+      const existing = product?.variant_stock ?? {};
+      const mapped: Record<string, string> = {};
+      for (const [key, qty] of Object.entries(existing)) {
+        mapped[key] = String(qty);
+      }
+      return mapped;
+    },
+  );
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [categoryId, setCategoryId] = useState(
     product?.category_id?.toString() ?? "",
   );
-  const [color, setColor] = useState(product?.color ?? "");
+  const [colors, setColors] = useState<string[]>(product?.colors ?? []);
   const [badge, setBadge] = useState(product?.badge ?? "");
   const [materials, setMaterials] = useState(product?.materials ?? "");
   const [details, setDetails] = useState(product?.details.join("\n") ?? "");
@@ -62,6 +87,14 @@ export function ProductForm({ product }: ProductFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const sizeList = useMemo(() => parseSizes(sizes), [sizes]);
+  const combos = useMemo(
+    () => buildVariantCombos(sizeList, colors),
+    [sizeList, colors],
+  );
+  const useVariantMatrix =
+    sizeList.length > 1 || colors.length > 1 || combos.length > 1;
+
   useEffect(() => {
     void listCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
@@ -72,31 +105,62 @@ export function ProductForm({ product }: ProductFormProps) {
     }
   }, [name, isEditing]);
 
+  // Seed missing combo keys when sizes/colors change so the matrix stays complete.
+  useEffect(() => {
+    if (!useVariantMatrix) return;
+    setVariantStock((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const combo of combos) {
+        if (next[combo.key] === undefined) {
+          next[combo.key] = "0";
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [combos, useVariantMatrix]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
+
+    const parsedSizes = parseSizes(sizes);
+    let nextStock = Number(stock);
+    let nextVariantStock: Record<string, number> = {};
+
+    if (useVariantMatrix) {
+      for (const combo of buildVariantCombos(parsedSizes, colors)) {
+        nextVariantStock[combo.key] = Math.max(
+          0,
+          Math.floor(Number(variantStock[combo.key] ?? 0)),
+        );
+      }
+      nextStock = Object.values(nextVariantStock).reduce((a, b) => a + b, 0);
+    }
 
     const payload = {
       name,
       slug,
       description: description || null,
       price_cents: Math.round(Number(price) * 100),
+      sale_price_cents: salePrice
+        ? Math.round(Number(salePrice) * 100)
+        : null,
       currency: product?.currency ?? DEFAULT_CURRENCY,
-      stock: Number(stock),
+      stock: nextStock,
+      variant_stock: nextVariantStock,
       is_active: isActive,
       category_id: categoryId ? Number(categoryId) : null,
-      color: color || null,
+      colors,
       badge: badge || null,
       materials: materials || null,
       details: details
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean),
-      sizes: sizes
-        .split(",")
-        .map((size) => size.trim())
-        .filter(Boolean),
+      sizes: parsedSizes,
       weight_grams: weightGrams ? Number(weightGrams) : null,
       length_cm: lengthCm ? Number(lengthCm) : null,
       width_cm: widthCm ? Number(widthCm) : null,
@@ -154,16 +218,33 @@ export function ProductForm({ product }: ProductFormProps) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="stock">Stock</Label>
+          <Label htmlFor="sale-price">Sale price (ZAR)</Label>
           <Input
-            id="stock"
+            id="sale-price"
             type="number"
             min="0"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            required
+            step="0.01"
+            value={salePrice}
+            onChange={(e) => setSalePrice(e.target.value)}
+            placeholder="Optional"
           />
+          <p className="text-xs text-muted-foreground">
+            Leave blank for no sale. Must be lower than the regular price.
+          </p>
         </div>
+        {!useVariantMatrix ? (
+          <div className="space-y-2">
+            <Label htmlFor="stock">Stock</Label>
+            <Input
+              id="stock"
+              type="number"
+              min="0"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              required
+            />
+          </div>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
           <select
@@ -195,9 +276,8 @@ export function ProductForm({ product }: ProductFormProps) {
             ))}
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="color">Color</Label>
-          <Input id="color" value={color} onChange={(e) => setColor(e.target.value)} />
+        <div className="space-y-2 md:col-span-2">
+          <ColorPicker colors={colors} onChange={setColors} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="materials">Materials</Label>
@@ -211,6 +291,68 @@ export function ProductForm({ product }: ProductFormProps) {
           <Label htmlFor="sizes">Sizes (comma-separated)</Label>
           <Input id="sizes" value={sizes} onChange={(e) => setSizes(e.target.value)} />
         </div>
+        {useVariantMatrix ? (
+          <div className="space-y-3 md:col-span-2">
+            <div>
+              <Label>Variant stock</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Set quantity for each size
+                {colors.length > 0 ? " and color" : ""} combination. Total:{" "}
+                {combos.reduce(
+                  (sum, combo) =>
+                    sum + Math.max(0, Math.floor(Number(variantStock[combo.key] ?? 0))),
+                  0,
+                )}
+              </p>
+            </div>
+            <div className="overflow-x-auto rounded-sm border border-border">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-border bg-muted/40 text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Size</th>
+                    {colors.length > 0 ? (
+                      <th className="px-3 py-2 font-medium">Color</th>
+                    ) : null}
+                    <th className="px-3 py-2 font-medium">Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {combos.map((combo) => (
+                    <tr key={combo.key} className="border-b border-border/70">
+                      <td className="px-3 py-2">{combo.size}</td>
+                      {colors.length > 0 ? (
+                        <td className="px-3 py-2">
+                          {combo.color ? (
+                            <span className="inline-flex items-center gap-2">
+                              <ColorSwatch color={combo.color} size="sm" />
+                              <span className="font-mono text-xs">{combo.color}</span>
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      ) : null}
+                      <td className="px-3 py-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          className="h-9 w-24"
+                          value={variantStock[combo.key] ?? "0"}
+                          onChange={(e) =>
+                            setVariantStock((prev) => ({
+                              ...prev,
+                              [combo.key]: e.target.value,
+                            }))
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="details">Details (one per line)</Label>
           <textarea

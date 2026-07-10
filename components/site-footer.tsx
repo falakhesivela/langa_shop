@@ -13,19 +13,19 @@ const columns = [
   },
   {
     title: "About",
-    links: ["Our Story", "Materials", "Sustainability", "Stockists", "Journal"],
+    links: ["Our Story", "Size Guide", "Shipping", "Contact", "FAQ"],
   },
 ]
 
 export function SiteFooter() {
   return (
-    <footer className="mt-24 border-t border-border bg-secondary text-secondary-foreground">
-      <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className="mt-16 border-t border-border bg-secondary text-secondary-foreground sm:mt-24">
+      <div className="mx-auto max-w-7xl px-5 py-12 sm:py-16 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:gap-12">
           <div className="max-w-sm">
-            <BrandLogo className="h-32 w-auto" />
-            <p className="mt-4 leading-relaxed text-muted-foreground">
-              Considered clothing made from natural materials, designed to be worn for years rather than seasons.
+            <BrandLogo className="h-20 w-auto sm:h-28 lg:h-32" />
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Trendy women's fashion for every mood — cute, bold, and always new.
             </p>
             <form className="mt-6">
               <label htmlFor="newsletter" className="text-sm uppercase tracking-wide text-muted-foreground">
@@ -48,23 +48,25 @@ export function SiteFooter() {
             </form>
           </div>
 
-          {columns.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{col.title}</h3>
-              <ul className="mt-4 flex flex-col gap-3">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <Link href="/products" className="text-sm transition-colors hover:text-accent">
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:contents">
+            {columns.map((col) => (
+              <div key={col.title}>
+                <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{col.title}</h3>
+                <ul className="mt-3 flex flex-col gap-2.5 sm:mt-4 sm:gap-3">
+                  {col.links.map((link) => (
+                    <li key={link}>
+                      <Link href="/products" className="text-sm transition-colors hover:text-accent">
+                        {link}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-sm text-muted-foreground sm:flex-row">
+        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground sm:mt-14 sm:flex-row sm:items-center sm:gap-4">
           <p>© {new Date().getFullYear()} {APP_NAME}. All rights reserved.</p>
           <div className="flex gap-6">
             <Link href="/products" className="hover:text-foreground">Privacy</Link>

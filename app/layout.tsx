@@ -22,11 +22,11 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: `${APP_NAME} — Modern Wardrobe Essentials`,
+    default: `${APP_NAME} — Women's Fashion`,
     template: `%s | ${APP_NAME}`,
   },
   description:
-    "Considered clothing made from natural materials. Timeless silhouettes, refined tailoring, and pieces designed to last.",
+    "Trendy women's clothes at prices you'll love. New drops, cute fits, and bold street style — shop NewFit.",
   icons: {
     icon: [
       {

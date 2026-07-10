@@ -1,4 +1,4 @@
-HOUSE OF NOLUHLE — LOGO SET
+NEWFIT — LOGO SET
 ============================
 
 All SVG files have transparent backgrounds and the text is converted

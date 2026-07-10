@@ -1,5 +1,5 @@
-const ACCESS_TOKEN_KEY = "khathalek_access_token";
-const REFRESH_TOKEN_KEY = "khathalek_refresh_token";
+const ACCESS_TOKEN_KEY = "newfit_access_token";
+const REFRESH_TOKEN_KEY = "newfit_refresh_token";
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") {

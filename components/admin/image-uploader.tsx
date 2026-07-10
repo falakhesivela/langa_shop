@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { uploadFileToR2 } from "@/lib/api/admin";
 import type { ProductImageInput } from "@/lib/types/admin";
 import { getErrorMessage } from "@/lib/api/errors";
+import { resolveMediaUrl } from "@/lib/media";
 import { Button } from "@/components/ui/Button";
 
 type ImageUploaderProps = {
@@ -21,6 +22,7 @@ export function ImageUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewByUrl, setPreviewByUrl] = useState<Record<string, string>>({});
 
   async function handleFiles(fileList: FileList | null) {
     if (!fileList?.length) return;
@@ -30,9 +32,11 @@ export function ImageUploader({
 
     try {
       const uploaded: ProductImageInput[] = [];
+      const nextPreviews: Record<string, string> = {};
 
       for (const file of Array.from(fileList)) {
         const publicUrl = await uploadFileToR2(file);
+        nextPreviews[publicUrl] = URL.createObjectURL(file);
         uploaded.push({
           url: publicUrl,
           alt_text: altFallback || file.name,
@@ -41,6 +45,7 @@ export function ImageUploader({
         });
       }
 
+      setPreviewByUrl((current) => ({ ...current, ...nextPreviews }));
       onChange([...images, ...uploaded]);
     } catch (err) {
       setError(getErrorMessage(err, "Image upload failed."));
@@ -62,6 +67,19 @@ export function ImageUploader({
   }
 
   function removeImage(index: number) {
+    const removed = images[index];
+    if (removed) {
+      const preview = previewByUrl[removed.url];
+      if (preview) {
+        URL.revokeObjectURL(preview);
+        setPreviewByUrl((current) => {
+          const next = { ...current };
+          delete next[removed.url];
+          return next;
+        });
+      }
+    }
+
     const next = images.filter((_, imageIndex) => imageIndex !== index);
     if (next.length > 0 && !next.some((image) => image.is_primary)) {
       next[0] = { ...next[0], is_primary: true };
@@ -109,11 +127,12 @@ export function ImageUploader({
             >
               <div className="relative aspect-square overflow-hidden rounded-sm bg-muted">
                 <Image
-                  src={image.url}
+                  src={previewByUrl[image.url] ?? resolveMediaUrl(image.url)}
                   alt={image.alt_text ?? "Product image"}
                   fill
                   className="object-cover"
                   sizes="200px"
+                  unoptimized
                 />
               </div>
               <div className="mt-3 flex items-center justify-between gap-2">

@@ -2,18 +2,23 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/components/cart-context";
-import { verifyPayment } from "@/lib/api/orders";
+import { guestVerifyPayment, verifyPayment } from "@/lib/api/orders";
+import {
+  clearGuestCart,
+  clearGuestCheckoutEmail,
+  getGuestCheckoutEmail,
+} from "@/lib/cart/guest-cart";
 import { getErrorMessage } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/context";
 import { formatPrice } from "@/lib/products";
+import { ColorSwatch } from "@/components/color-swatch";
 import type { Order } from "@/lib/types/order";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 
 function CheckoutCallbackContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { refresh } = useCart();
@@ -24,30 +29,35 @@ function CheckoutCallbackContent() {
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasVerified, setHasVerified] = useState(false);
+  // A guest whose checkout email we no longer have (cleared storage / new
+  // device) can't be verified automatically and is asked to sign in.
+  const [needsSignIn, setNeedsSignIn] = useState(false);
 
   useEffect(() => {
-    if (authLoading || hasVerified) {
-      return;
-    }
-
-    if (!reference) {
-      setError("Missing payment reference.");
-      return;
-    }
-
-    if (!isAuthenticated) {
-      const nextUrl = `/checkout/callback?reference=${encodeURIComponent(reference)}`;
-      router.replace(`/login?next=${encodeURIComponent(nextUrl)}`);
+    if (authLoading || hasVerified || !reference) {
       return;
     }
 
     async function verify() {
+      const guestEmail = getGuestCheckoutEmail();
+      if (!isAuthenticated && !guestEmail) {
+        setNeedsSignIn(true);
+        setHasVerified(true);
+        return;
+      }
+
       setIsVerifying(true);
       try {
-        const result = await verifyPayment(reference);
+        const result = isAuthenticated
+          ? await verifyPayment(reference)
+          : await guestVerifyPayment(reference, guestEmail as string);
         setOrder(result.order);
         setPaymentStatus(result.payment_status);
         if (result.payment_status === "success") {
+          if (!isAuthenticated) {
+            clearGuestCart();
+            clearGuestCheckoutEmail();
+          }
           await refresh();
         }
       } catch (err) {
@@ -59,27 +69,7 @@ function CheckoutCallbackContent() {
     }
 
     void verify();
-  }, [
-    authLoading,
-    hasVerified,
-    isAuthenticated,
-    reference,
-    refresh,
-    router,
-  ]);
-
-  if (authLoading || isVerifying) {
-    return (
-      <main className="mx-auto max-w-2xl px-5 py-16 text-center">
-        <h1 className="font-serif text-4xl">Verifying payment</h1>
-        <p className="mt-4 text-muted-foreground">
-          {authLoading
-            ? "Restoring your session after checkout..."
-            : "Please wait while we confirm your order with Paystack."}
-        </p>
-      </main>
-    );
-  }
+  }, [authLoading, hasVerified, isAuthenticated, reference, refresh]);
 
   if (!reference) {
     return (
@@ -93,13 +83,29 @@ function CheckoutCallbackContent() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (authLoading || isVerifying || (!hasVerified && !needsSignIn)) {
     return (
       <main className="mx-auto max-w-2xl px-5 py-16 text-center">
-        <h1 className="font-serif text-4xl">Sign in to confirm payment</h1>
+        <h1 className="font-serif text-4xl">Verifying payment</h1>
         <p className="mt-4 text-muted-foreground">
-          Your payment may have gone through. Sign in so we can link it to your
-          order.
+          {authLoading
+            ? "Restoring your session after checkout..."
+            : "Please wait while we confirm your order with Paystack."}
+        </p>
+      </main>
+    );
+  }
+
+  // Guest with no stored email (e.g. cleared storage or a different device):
+  // we can't verify automatically, so offer to sign in and link the order.
+  if (needsSignIn) {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-16 text-center">
+        <h1 className="font-serif text-4xl">Confirm your payment</h1>
+        <p className="mt-4 text-muted-foreground">
+          Your payment may have gone through, but we couldn&apos;t match it to
+          your order automatically. Sign in with the email you used at checkout
+          to view your order.
         </p>
         <div className="mt-8">
           <Button
@@ -167,8 +173,12 @@ function CheckoutCallbackContent() {
                 key={item.id}
                 className="flex items-center justify-between gap-4 py-3 text-sm"
               >
-                <span>
-                  {item.product_name} · {item.size} × {item.quantity}
+                <span className="inline-flex items-center gap-2">
+                  {item.product_name} · {item.size}
+                  {item.color ? (
+                    <ColorSwatch color={item.color} size="sm" />
+                  ) : null}{" "}
+                  × {item.quantity}
                 </span>
                 <span>
                   {formatPrice((item.unit_price_cents * item.quantity) / 100)}
@@ -179,8 +189,24 @@ function CheckoutCallbackContent() {
         </div>
       ) : null}
 
+      {isSuccess && !isAuthenticated ? (
+        <p className="mt-8 text-sm text-muted-foreground">
+          We&apos;ve emailed your confirmation. Want to track this and future
+          orders?{" "}
+          <Link
+            href="/register"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Create an account
+          </Link>{" "}
+          with the same email to see your order history.
+        </p>
+      ) : null}
+
       <div className="mt-8 flex flex-wrap gap-4">
-        <Button href="/account/orders">View orders</Button>
+        {isAuthenticated ? (
+          <Button href="/account/orders">View orders</Button>
+        ) : null}
         <Link
           href="/"
           className="inline-flex items-center text-sm font-medium uppercase tracking-wide text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

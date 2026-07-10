@@ -2,12 +2,18 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { X, ShoppingBag } from "lucide-react"
+import { X, ShoppingBag, Minus, Plus } from "lucide-react"
 import { useCart } from "@/components/cart-context"
 import { formatPrice } from "@/lib/products"
+import { ColorSwatch } from "@/components/color-swatch"
+
+function cartLineKey(item: { slug: string; size: string; color: string }) {
+  return `${item.slug}-${item.size}-${item.color}`
+}
 
 export function CartDrawer() {
-  const { items, isOpen, close, removeItem, count, checkout, isCheckingOut, error } = useCart()
+  const { items, isOpen, close, updateQuantity, removeItem, count, error } =
+    useCart()
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0)
 
@@ -60,7 +66,7 @@ export function CartDrawer() {
               ) : null}
               <ul className="flex flex-col gap-6">
                 {items.map((item) => (
-                  <li key={`${item.slug}-${item.size}`} className="flex gap-4">
+                  <li key={cartLineKey(item)} className="flex gap-4">
                     <div className="relative aspect-3/4 w-20 shrink-0 overflow-hidden rounded-sm bg-muted">
                       <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" sizes="80px" />
                     </div>
@@ -70,14 +76,68 @@ export function CartDrawer() {
                         <p className="font-medium">{formatPrice(item.price * item.qty)}</p>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Size {item.size} · Qty {item.qty}
+                        Size {item.size}
+                        {item.color ? (
+                          <>
+                            {" "}
+                            ·{" "}
+                            <span className="inline-flex items-center gap-1.5 align-middle">
+                              <ColorSwatch color={item.color} size="sm" />
+                              {item.color}
+                            </span>
+                          </>
+                        ) : null}
                       </p>
-                      <button
-                        onClick={() => void removeItem(item.slug, item.size)}
-                        className="mt-auto self-start text-xs uppercase tracking-wide text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                      >
-                        Remove
-                      </button>
+                      <div className="mt-auto flex items-center justify-between gap-3 pt-3">
+                        <div className="flex items-center rounded-sm border border-border">
+                          <button
+                            onClick={() =>
+                              void updateQuantity(
+                                item.slug,
+                                item.size,
+                                item.color,
+                                item.qty - 1,
+                              )
+                            }
+                            disabled={item.qty <= 1}
+                            aria-label="Decrease quantity"
+                            className="flex size-9 items-center justify-center transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                          >
+                            <Minus className="size-3.5" />
+                          </button>
+                          <span className="w-8 text-center text-sm tabular-nums">
+                            {item.qty}
+                          </span>
+                          <button
+                            onClick={() =>
+                              void updateQuantity(
+                                item.slug,
+                                item.size,
+                                item.color,
+                                item.qty + 1,
+                              )
+                            }
+                            disabled={
+                              item.stock > 0 &&
+                              items
+                                .filter((i) => i.productId === item.productId)
+                                .reduce((sum, i) => sum + i.qty, 0) >= item.stock
+                            }
+                            aria-label="Increase quantity"
+                            className="flex size-9 items-center justify-center transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                          >
+                            <Plus className="size-3.5" />
+                          </button>
+                        </div>
+                        <button
+                          onClick={() =>
+                            void removeItem(item.slug, item.size, item.color)
+                          }
+                          className="text-xs uppercase tracking-wide text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -89,15 +149,15 @@ export function CartDrawer() {
                 <span className="text-sm uppercase tracking-wide text-muted-foreground">Subtotal</span>
                 <span className="font-serif text-xl">{formatPrice(subtotal)}</span>
               </div>
-              <button
-                onClick={() => void checkout()}
-                disabled={isCheckingOut}
-                className="w-full rounded-sm bg-primary py-3.5 text-sm font-medium uppercase tracking-widest text-primary-foreground transition-colors hover:bg-accent disabled:opacity-50"
+              <Link
+                href="/checkout"
+                onClick={close}
+                className="block w-full rounded-sm bg-primary py-3.5 text-center text-sm font-medium uppercase tracking-widest text-primary-foreground transition-colors hover:bg-accent"
               >
-                {isCheckingOut ? "Redirecting…" : "Checkout"}
-              </button>
+                Checkout
+              </Link>
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Shipping & taxes calculated at checkout
+                Shipping calculated at checkout
               </p>
             </div>
           </>

@@ -1,3 +1,4 @@
+import { AnnouncementBar } from "@/components/announcement-bar";
 import { SiteShell } from "@/components/site-shell";
 
 export default function ShopLayout({
@@ -5,5 +6,10 @@ export default function ShopLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <SiteShell>{children}</SiteShell>;
+  return (
+    <>
+      <AnnouncementBar />
+      <SiteShell>{children}</SiteShell>
+    </>
+  );
 }

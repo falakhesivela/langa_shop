@@ -2,7 +2,7 @@ import Image from "next/image"
 import { APP_NAME } from "@/lib/config"
 
 /**
- * House of Noluhle logo. Uses a native <picture> so the browser swaps to the
+ * NewFit logo. Uses a native <picture> so the browser swaps to the
  * cream "reverse" mark on dark backgrounds and falls back to the charcoal
  * "primary" mark otherwise — tracking `prefers-color-scheme`, which is how this
  * theme's dark mode is driven (see globals.css).

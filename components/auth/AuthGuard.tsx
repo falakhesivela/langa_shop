@@ -1,23 +1,28 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
+import { getLoginHref } from "@/lib/auth/routes";
 import { Alert } from "@/components/ui/Alert";
 
 type AuthGuardProps = {
   children: React.ReactNode;
 };
 
-export function AuthGuard({ children }: AuthGuardProps) {
+function AuthGuardContent({ children }: AuthGuardProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
+      const query = searchParams.toString();
+      const returnTo = query ? `${pathname}?${query}` : pathname;
+      router.replace(getLoginHref(returnTo));
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, pathname, router, searchParams]);
 
   if (isLoading) {
     return (
@@ -36,4 +41,18 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   return children;
+}
+
+export function AuthGuard({ children }: AuthGuardProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          Restoring your session...
+        </div>
+      }
+    >
+      <AuthGuardContent>{children}</AuthGuardContent>
+    </Suspense>
+  );
 }

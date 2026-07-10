@@ -12,6 +12,16 @@ export async function addCartItem(input: AddCartItemInput): Promise<ApiCartItem>
   });
 }
 
+export async function updateCartItem(
+  cartItemId: number,
+  quantity: number,
+): Promise<ApiCartItem> {
+  return apiRequestWithAuth<ApiCartItem>(`/cart/items/${cartItemId}`, {
+    method: "PATCH",
+    body: { quantity },
+  });
+}
+
 export async function removeCartItem(cartItemId: number): Promise<void> {
   return apiRequestWithAuth<void>(`/cart/items/${cartItemId}`, {
     method: "DELETE",

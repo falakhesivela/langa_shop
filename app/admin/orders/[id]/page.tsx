@@ -3,9 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getAdminOrder, updateAdminOrderStatus } from "@/lib/api/admin";
+import {
+  createAdminShipment,
+  getAdminOrder,
+  updateAdminOrderStatus,
+} from "@/lib/api/admin";
 import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
+import { ColorSwatch } from "@/components/color-swatch";
 import type { AdminOrder, OrderStatus } from "@/lib/types/order";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -57,6 +62,7 @@ export default function AdminOrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isShipping, setIsShipping] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -79,6 +85,20 @@ export default function AdminOrderDetailPage() {
 
     void load();
   }, [orderId]);
+
+  async function handleCreateShipment() {
+    if (!order) return;
+    setIsShipping(true);
+    setError(null);
+    try {
+      const updated = await createAdminShipment(order.id);
+      setOrder(updated);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to create shipment."));
+    } finally {
+      setIsShipping(false);
+    }
+  }
 
   async function handleSaveStatus() {
     if (!order) return;
@@ -139,7 +159,18 @@ export default function AdminOrderDetailPage() {
                 <div>
                   <p className="font-medium">{item.product_name}</p>
                   <p className="text-muted-foreground">
-                    Size {item.size} · Qty {item.quantity}
+                    Size {item.size}
+                    {item.color ? (
+                      <>
+                        {" "}
+                        ·{" "}
+                        <span className="inline-flex items-center gap-1.5 align-middle">
+                          <ColorSwatch color={item.color} size="sm" />
+                          {item.color}
+                        </span>
+                      </>
+                    ) : null}{" "}
+                    · Qty {item.quantity}
                   </p>
                 </div>
                 <p>{formatPrice((item.unit_price_cents * item.quantity) / 100)}</p>
@@ -229,6 +260,63 @@ export default function AdminOrderDetailPage() {
                   {isSaving ? "Saving..." : "Save status"}
                 </Button>
               </>
+            )}
+          </div>
+
+          <div className="mt-6 border-t border-border pt-6">
+            <h3 className="text-sm uppercase tracking-wide text-muted-foreground">
+              Shipping
+            </h3>
+            {order.shipping_service_name ? (
+              <p className="mt-2 text-sm">{order.shipping_service_name}</p>
+            ) : null}
+
+            {order.tracking_reference ? (
+              <dl className="mt-3 space-y-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Tracking</dt>
+                  <dd className="text-right break-all">
+                    {order.tracking_url ? (
+                      <a
+                        href={order.tracking_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-4"
+                      >
+                        {order.tracking_reference}
+                      </a>
+                    ) : (
+                      order.tracking_reference
+                    )}
+                  </dd>
+                </div>
+                {order.shipment_status ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Shipment</dt>
+                    <dd className="capitalize">
+                      {order.shipment_status.replace(/[-_]/g, " ")}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : order.shipping_service_code ? (
+              <>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No shipment created yet.
+                </p>
+                <Button
+                  className="mt-3 w-full"
+                  variant="secondary"
+                  onClick={() => void handleCreateShipment()}
+                  disabled={isShipping}
+                >
+                  {isShipping ? "Creating shipment..." : "Create Bob Go shipment"}
+                </Button>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">
+                No shipping method was selected for this order.
+              </p>
             )}
           </div>
         </section>

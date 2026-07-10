@@ -1,11 +1,12 @@
 import { apiRequestWithAuth } from "@/lib/api/client";
-import type { Category } from "@/lib/types/product";
+import type { Category, Promotion } from "@/lib/types/product";
 import type {
   AdminProduct,
   CategoryInput,
   PresignUploadResponse,
   ProductCreateInput,
   ProductUpdateInput,
+  PromotionInput,
 } from "@/lib/types/admin";
 import type { AdminOrder, OrderStatus } from "@/lib/types/order";
 import type { User } from "@/lib/types/auth";
@@ -76,6 +77,35 @@ export async function deleteCategory(id: number): Promise<void> {
   });
 }
 
+export async function listPromotions(): Promise<Promotion[]> {
+  return apiRequestWithAuth<Promotion[]>("/promotions/");
+}
+
+export async function createPromotion(
+  input: PromotionInput,
+): Promise<Promotion> {
+  return apiRequestWithAuth<Promotion>("/promotions/", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function updatePromotion(
+  id: number,
+  input: Partial<PromotionInput>,
+): Promise<Promotion> {
+  return apiRequestWithAuth<Promotion>(`/promotions/${id}`, {
+    method: "PUT",
+    body: input,
+  });
+}
+
+export async function deletePromotion(id: number): Promise<void> {
+  return apiRequestWithAuth<void>(`/promotions/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function presignUpload(
   filename: string,
   contentType: string,
@@ -87,15 +117,29 @@ export async function presignUpload(
 }
 
 export async function uploadFileToR2(file: File): Promise<string> {
-  const presigned = await presignUpload(file.name, file.type);
+  const contentType =
+    file.type ||
+    (file.name.toLowerCase().endsWith(".png")
+      ? "image/png"
+      : file.name.toLowerCase().endsWith(".webp")
+        ? "image/webp"
+        : file.name.toLowerCase().endsWith(".gif")
+          ? "image/gif"
+          : "image/jpeg");
+  const presigned = await presignUpload(file.name, contentType);
   const response = await fetch(presigned.upload_url, {
     method: "PUT",
-    headers: { "Content-Type": file.type },
+    headers: { "Content-Type": contentType },
     body: file,
   });
 
   if (!response.ok) {
-    throw new Error("Failed to upload image to storage.");
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      detail
+        ? `Failed to upload image to storage (${response.status}): ${detail}`
+        : `Failed to upload image to storage (${response.status}).`,
+    );
   }
 
   return presigned.public_url;
@@ -119,6 +163,12 @@ export async function updateAdminOrderStatus(
   return apiRequestWithAuth<AdminOrder>(`/admin/orders/${orderId}`, {
     method: "PATCH",
     body: { status },
+  });
+}
+
+export async function createAdminShipment(orderId: number): Promise<AdminOrder> {
+  return apiRequestWithAuth<AdminOrder>(`/admin/orders/${orderId}/shipment`, {
+    method: "POST",
   });
 }
 

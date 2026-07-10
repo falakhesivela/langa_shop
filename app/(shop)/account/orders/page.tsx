@@ -6,6 +6,7 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { listOrders } from "@/lib/api/orders";
 import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
+import { ColorSwatch } from "@/components/color-swatch";
 import type { Order } from "@/lib/types/order";
 import { Alert } from "@/components/ui/Alert";
 
@@ -80,8 +81,12 @@ function AccountOrdersContent() {
                     key={item.id}
                     className="flex justify-between gap-4 py-3"
                   >
-                    <span>
-                      {item.product_name} · {item.size} × {item.quantity}
+                    <span className="inline-flex items-center gap-2">
+                      {item.product_name} · {item.size}
+                      {item.color ? (
+                        <ColorSwatch color={item.color} size="sm" />
+                      ) : null}{" "}
+                      × {item.quantity}
                     </span>
                     <span>
                       {formatPrice((item.unit_price_cents * item.quantity) / 100)}
@@ -89,6 +94,29 @@ function AccountOrdersContent() {
                   </li>
                 ))}
               </ul>
+
+              {order.tracking_reference ? (
+                <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4 text-sm">
+                  <span className="text-muted-foreground">
+                    {order.shipping_service_name ?? "Shipment"}
+                    {order.shipment_status
+                      ? ` · ${order.shipment_status.replace(/[-_]/g, " ")}`
+                      : ""}
+                  </span>
+                  {order.tracking_url ? (
+                    <a
+                      href={order.tracking_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium underline underline-offset-4"
+                    >
+                      Track {order.tracking_reference}
+                    </a>
+                  ) : (
+                    <span className="font-medium">{order.tracking_reference}</span>
+                  )}
+                </div>
+              ) : null}
             </article>
           ))
         )}

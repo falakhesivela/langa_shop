@@ -11,11 +11,13 @@ export type AdminProduct = {
   slug: string;
   description: string | null;
   price_cents: number;
+  sale_price_cents: number | null;
   currency: string;
   stock: number;
+  variant_stock?: Record<string, number>;
   is_active: boolean;
   category_id: number | null;
-  color: string | null;
+  colors: string[];
   badge: string | null;
   materials: string | null;
   details: string[];
@@ -40,11 +42,13 @@ export type ProductCreateInput = {
   slug: string;
   description?: string | null;
   price_cents: number;
+  sale_price_cents?: number | null;
   currency?: string;
   stock: number;
+  variant_stock?: Record<string, number>;
   is_active?: boolean;
   category_id?: number | null;
-  color?: string | null;
+  colors?: string[];
   badge?: string | null;
   materials?: string | null;
   details?: string[];
@@ -63,6 +67,21 @@ export type CategoryInput = {
   slug: string;
 };
 
+export type PromotionInput = {
+  name: string;
+  slug: string;
+  placement: "announcement" | "hero" | "sale_collection";
+  title: string;
+  subtitle?: string | null;
+  cta_label?: string | null;
+  cta_href?: string | null;
+  image_url?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+};
+
 export type PresignUploadResponse = {
   upload_url: string;
   public_url: string;
@@ -75,11 +94,15 @@ export function adminProductToForm(product: AdminProduct) {
     slug: product.slug,
     description: product.description ?? "",
     price: (product.price_cents / 100).toString(),
+    sale_price:
+      product.sale_price_cents != null
+        ? (product.sale_price_cents / 100).toString()
+        : "",
     currency: product.currency,
     stock: product.stock.toString(),
     is_active: product.is_active,
     category_id: product.category_id?.toString() ?? "",
-    color: product.color ?? "",
+    colors: product.colors ?? [],
     badge: product.badge ?? "",
     materials: product.materials ?? "",
     details: product.details.join("\n"),

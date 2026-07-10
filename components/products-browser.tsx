@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ProductCard } from "@/components/product-card"
-import { categories, mapShopProduct, toApiSort } from "@/lib/products"
+import { mapShopProduct, toApiSort } from "@/lib/products"
 import { listProducts } from "@/lib/api/products"
+import { listCategories } from "@/lib/api/categories"
 import type { Product } from "@/lib/products"
+import type { Category } from "@/lib/types/product"
 
 type SortKey = "featured" | "price-asc" | "price-desc"
 
@@ -16,15 +18,41 @@ const sortOptions: { value: SortKey; label: string }[] = [
 ]
 
 export function ProductsBrowser() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const initialCategory = searchParams.get("category") ?? "All"
-  const [active, setActive] = useState<string>(
-    categories.includes(initialCategory as (typeof categories)[number]) ? initialCategory : "All",
-  )
+  const searchQuery = (searchParams.get("search") ?? "").trim()
+  const onSaleOnly = searchParams.get("on_sale") === "true"
+
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(["All"])
+  const [active, setActive] = useState<string>(initialCategory)
   const [sort, setSort] = useState<SortKey>("featured")
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void listCategories()
+      .then((cats: Category[]) => {
+        if (cancelled) return
+        const names = ["All", ...cats.map((c) => c.name)]
+        setCategoryOptions(names)
+        if (initialCategory !== "All" && !names.includes(initialCategory)) {
+          setActive("All")
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCategoryOptions(["All"])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [initialCategory])
+
+  useEffect(() => {
+    setActive(searchParams.get("category") ?? "All")
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false
@@ -36,7 +64,9 @@ export function ProductsBrowser() {
       try {
         const apiProducts = await listProducts({
           category: active === "All" ? undefined : active,
+          search: searchQuery || undefined,
           sort: toApiSort(sort),
+          on_sale: onSaleOnly ? true : undefined,
         })
 
         if (!cancelled) {
@@ -59,19 +89,31 @@ export function ProductsBrowser() {
     return () => {
       cancelled = true
     }
-  }, [active, sort])
+  }, [active, sort, onSaleOnly, searchQuery])
 
   const filtered = useMemo(() => products, [products])
+
+  function selectCategory(cat: string) {
+    setActive(cat)
+    const params = new URLSearchParams(searchParams.toString())
+    if (cat === "All") {
+      params.delete("category")
+    } else {
+      params.set("category", cat)
+    }
+    const query = params.toString()
+    router.replace(query ? `/products?${query}` : "/products", { scroll: false })
+  }
 
   return (
     <div>
       <div className="sticky top-[65px] z-30 -mx-5 border-y border-border bg-background/90 px-5 py-3 backdrop-blur-md lg:-mx-8 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-1 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {categories.map((cat) => (
+            {categoryOptions.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActive(cat)}
+                onClick={() => selectCategory(cat)}
                 className={`shrink-0 rounded-full border px-4 py-1.5 text-sm transition-colors ${
                   active === cat
                     ? "border-foreground bg-foreground text-background"
@@ -102,10 +144,17 @@ export function ProductsBrowser() {
         </div>
       </div>
 
-      {error ? (
-        <p className="mt-6 text-sm text-accent">{error}</p>
-      ) : (
+      {searchQuery ? (
         <p className="mt-6 text-sm text-muted-foreground">
+          Results for{" "}
+          <span className="text-foreground">&ldquo;{searchQuery}&rdquo;</span>
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className={`text-sm text-accent ${searchQuery ? "mt-2" : "mt-6"}`}>{error}</p>
+      ) : (
+        <p className={`text-sm text-muted-foreground ${searchQuery ? "mt-2" : "mt-6"}`}>
           {isLoading
             ? "Loading products…"
             : `${filtered.length} ${filtered.length === 1 ? "item" : "items"}`}
