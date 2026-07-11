@@ -6,9 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   LogOut,
+  Mail,
   Megaphone,
   Menu,
   Package,
+  RotateCcw,
   ShoppingBag,
   Star,
   Store,
@@ -37,6 +39,7 @@ const navSections = [
     title: "Sales",
     links: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+      { href: "/admin/returns", label: "Returns", icon: RotateCcw },
       { href: "/admin/users", label: "Customers", icon: Users },
       { href: "/admin/reviews", label: "Reviews", icon: Star },
     ],
@@ -46,6 +49,7 @@ const navSections = [
     links: [
       { href: "/admin/promotions", label: "Promotions", icon: Megaphone },
       { href: "/admin/discounts", label: "Discount codes", icon: Ticket },
+      { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
     ],
   },
 ];

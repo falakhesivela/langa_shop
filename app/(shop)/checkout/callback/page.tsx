@@ -146,16 +146,23 @@ function CheckoutCallbackContent() {
 
   const isSuccess =
     paymentStatus === "success" && order?.status === "paid";
+  const isRefunded = order?.status === "refunded";
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-16">
       <h1 className="font-serif text-4xl">
-        {isSuccess ? "Thank you for your order" : "Payment incomplete"}
+        {isSuccess
+          ? "Thank you for your order"
+          : isRefunded
+            ? "Sold out — payment refunded"
+            : "Payment incomplete"}
       </h1>
       <p className="mt-4 text-muted-foreground">
         {isSuccess
           ? "Your payment was confirmed. We will prepare your order for shipping."
-          : "Your payment could not be confirmed. Your bag is untouched — you can try again below, or check once more if you did complete the payment."}
+          : isRefunded
+            ? "Your payment went through, but the last of this stock sold to another shopper moments before. We have refunded you in full — it may take a few days to reflect on your statement."
+            : "Your payment could not be confirmed. Your bag is untouched — you can try again below, or check once more if you did complete the payment."}
       </p>
 
       {order ? (
@@ -218,7 +225,7 @@ function CheckoutCallbackContent() {
       ) : null}
 
       <div className="mt-8 flex flex-wrap items-center gap-4">
-        {isSuccess ? (
+        {isSuccess || isRefunded ? (
           isAuthenticated ? (
             <Button href="/account/orders">View orders</Button>
           ) : null

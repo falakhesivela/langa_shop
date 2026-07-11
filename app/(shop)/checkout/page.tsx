@@ -10,8 +10,10 @@ import {
   getShippingRates,
 } from "@/lib/api/shipping";
 import { checkout, guestCheckout } from "@/lib/api/orders";
+import { createAddress, listAddresses } from "@/lib/api/addresses";
 import { validateDiscount, type DiscountValidation } from "@/lib/api/discounts";
 import { setGuestCheckoutEmail } from "@/lib/cart/guest-cart";
+import type { UserAddress } from "@/lib/types/address";
 import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
 import { ColorSwatch } from "@/components/color-swatch";
@@ -41,6 +43,9 @@ export default function CheckoutPage() {
 
   const [form, setForm] = useState(emptyAddress);
   const [guestEmail, setGuestEmail] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [saveAddress, setSaveAddress] = useState(false);
   const [shippingEnabled, setShippingEnabled] = useState(false);
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
@@ -59,6 +64,54 @@ export default function CheckoutPage() {
       .then((c) => setShippingEnabled(c.enabled))
       .catch(() => setShippingEnabled(false));
   }, []);
+
+  function applySavedAddress(address: UserAddress) {
+    setSelectedAddressId(address.id);
+    setForm({
+      full_name: address.full_name ?? "",
+      phone: address.phone ?? "",
+      address1: address.address1,
+      address2: address.address2 ?? "",
+      suburb: address.suburb ?? "",
+      city: address.city,
+      province: address.province ?? "",
+      postal_code: address.postal_code,
+    });
+    setRates([]);
+    setSelectedCode(null);
+  }
+
+  // Prefill the form with the shopper's default saved address.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    listAddresses()
+      .then((data) => {
+        if (cancelled || data.length === 0) return;
+        setSavedAddresses(data);
+        const preferred = data.find((a) => a.is_default) ?? data[0];
+        setSelectedAddressId(preferred.id);
+        setForm((prev) => {
+          // Don't clobber anything the shopper already typed.
+          const untouched = Object.values(prev).every((value) => !value);
+          if (!untouched) return prev;
+          return {
+            full_name: preferred.full_name ?? "",
+            phone: preferred.phone ?? "",
+            address1: preferred.address1,
+            address2: preferred.address2 ?? "",
+            suburb: preferred.suburb ?? "",
+            city: preferred.city,
+            province: preferred.province ?? "",
+            postal_code: preferred.postal_code,
+          };
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.qty, 0),
@@ -99,12 +152,15 @@ export default function CheckoutPage() {
 
   function updateField(key: keyof typeof emptyAddress, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    // An edited address is no longer the saved one it was filled from.
+    setSelectedAddressId(null);
     // Any address change invalidates previously fetched rates.
     setRates([]);
     setSelectedCode(null);
   }
 
   function applyPlaceAddress(place: ParsedPlaceAddress) {
+    setSelectedAddressId(null);
     setForm((prev) => ({
       ...prev,
       address1: place.address1 || prev.address1,
@@ -192,6 +248,10 @@ export default function CheckoutPage() {
     }
     setIsPaying(true);
     try {
+      if (isAuthenticated && saveAddress && selectedAddressId === null) {
+        // Best-effort: a failed save must never block the payment.
+        await createAddress({ ...buildAddress() }).catch(() => {});
+      }
       const result = isAuthenticated
         ? await checkout({
             shipping_address: buildAddress(),
@@ -278,6 +338,30 @@ export default function CheckoutPage() {
             className="space-y-5 rounded-sm border border-border p-6"
           >
             <h2 className="font-serif text-2xl">Shipping address</h2>
+
+            {savedAddresses.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Saved addresses</p>
+                <div className="flex flex-wrap gap-2">
+                  {savedAddresses.map((address) => (
+                    <button
+                      key={address.id}
+                      type="button"
+                      onClick={() => applySavedAddress(address)}
+                      className={`rounded-sm border px-3 py-1.5 text-sm transition-colors ${
+                        selectedAddressId === address.id
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border hover:border-foreground"
+                      }`}
+                    >
+                      {address.label || address.address1}
+                      {address.is_default ? " · default" : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="full_name">Full name</Label>
@@ -331,6 +415,17 @@ export default function CheckoutPage() {
                 />
               </div>
             </div>
+
+            {isAuthenticated && selectedAddressId === null ? (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={saveAddress}
+                  onChange={(e) => setSaveAddress(e.target.checked)}
+                />
+                Save this address to my address book
+              </label>
+            ) : null}
 
             {shippingEnabled ? (
               <Button type="submit" variant="secondary" isLoading={ratesLoading} disabled={!addressComplete}>

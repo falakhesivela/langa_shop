@@ -2,6 +2,10 @@ export const APP_NAME = "NewFit";
 
 export const DEFAULT_CURRENCY = "ZAR";
 
+/** Customer-facing support address shown on the contact and policy pages. */
+export const SUPPORT_EMAIL =
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@newfit.co.za";
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 

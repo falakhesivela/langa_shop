@@ -241,6 +241,13 @@ function AccountContent() {
         View order history
       </Link>
 
+      <Link
+        href="/account/addresses"
+        className="mt-4 block text-sm font-medium uppercase tracking-wide text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        Manage delivery addresses
+      </Link>
+
       <button
         onClick={() => void logout()}
         className="mt-8 text-sm font-medium uppercase tracking-wide text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

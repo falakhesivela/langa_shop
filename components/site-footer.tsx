@@ -21,6 +21,15 @@ const columns = [
       { label: "Register", href: "/register" },
     ],
   },
+  {
+    title: "Help",
+    links: [
+      { label: "Contact Us", href: "/contact" },
+      { label: "FAQ", href: "/faq" },
+      { label: "Delivery", href: "/shipping" },
+      { label: "Returns", href: "/returns" },
+    ],
+  },
 ]
 
 export function SiteFooter() {
@@ -54,8 +63,16 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground sm:mt-14">
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground sm:mt-14">
           <p>© {new Date().getFullYear()} {APP_NAME}. All rights reserved.</p>
+          <div className="flex gap-5">
+            <Link href="/privacy" className="transition-colors hover:text-accent">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-accent">
+              Terms of Service
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

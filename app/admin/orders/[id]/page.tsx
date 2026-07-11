@@ -26,6 +26,7 @@ const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
   shipped: ["delivered", "cancelled"],
   delivered: [],
   cancelled: [],
+  refunded: [],
 };
 
 const addressFieldLabels: Record<string, string> = {
@@ -177,7 +178,9 @@ export default function AdminOrderDetailPage() {
           >
             Print packing slip
           </Button>
-          {order.status !== "pending" && order.status !== "cancelled" ? (
+          {order.status !== "pending" &&
+          order.status !== "cancelled" &&
+          order.status !== "refunded" ? (
             <Button
               variant="secondary"
               onClick={() => void handleResendConfirmation()}

@@ -137,6 +137,7 @@ export type AdminStats = {
     shipped: number;
     delivered: number;
     cancelled: number;
+    refunded: number;
   };
   customers: {
     total: number;

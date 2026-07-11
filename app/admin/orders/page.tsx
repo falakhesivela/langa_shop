@@ -20,6 +20,7 @@ const statusFilters: Array<{ label: string; value?: OrderStatus }> = [
   { label: "Shipped", value: "shipped" },
   { label: "Delivered", value: "delivered" },
   { label: "Cancelled", value: "cancelled" },
+  { label: "Refunded", value: "refunded" },
 ];
 
 type OrdersQuery = {

@@ -3,7 +3,9 @@ export type OrderStatus =
   | "paid"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  // Payment succeeded but stock sold out first; the charge was refunded.
+  | "refunded";
 
 export type OrderItem = {
   id: number;
@@ -62,4 +64,27 @@ export type CheckoutResponse = {
 export type OrderVerifyResponse = {
   order: Order;
   payment_status: string;
+};
+
+export type ReturnStatus = "requested" | "approved" | "declined" | "completed";
+
+export type ReturnRequest = {
+  id: number;
+  order_id: number;
+  status: ReturnStatus;
+  reason: string;
+  admin_note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminReturnRequest = ReturnRequest & {
+  user_email: string;
+  order_total_cents: number;
+  currency: string;
+};
+
+export type AdminReturnList = {
+  items: AdminReturnRequest[];
+  total: number;
 };

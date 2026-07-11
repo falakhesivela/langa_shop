@@ -4,6 +4,7 @@ import type {
   GuestCartItemInput,
   Order,
   OrderVerifyResponse,
+  ReturnRequest,
 } from "@/lib/types/order";
 import type { ShippingAddress } from "@/lib/types/shipping";
 
@@ -60,4 +61,26 @@ export async function listOrders(): Promise<Order[]> {
 
 export async function getOrder(orderId: number): Promise<Order> {
   return apiRequestWithAuth<Order>(`/orders/${orderId}`);
+}
+
+export async function cancelOrder(orderId: number): Promise<Order> {
+  return apiRequestWithAuth<Order>(`/orders/${orderId}/cancel`, {
+    method: "POST",
+  });
+}
+
+export async function createReturnRequest(
+  orderId: number,
+  reason: string,
+): Promise<ReturnRequest> {
+  return apiRequestWithAuth<ReturnRequest>(`/orders/${orderId}/return`, {
+    method: "POST",
+    body: { reason },
+  });
+}
+
+export async function getReturnRequest(
+  orderId: number,
+): Promise<ReturnRequest | null> {
+  return apiRequestWithAuth<ReturnRequest | null>(`/orders/${orderId}/return`);
 }

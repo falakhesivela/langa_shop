@@ -11,7 +11,14 @@ import type {
   ProductUpdateInput,
   PromotionInput,
 } from "@/lib/types/admin";
-import type { AdminOrder, AdminOrderList, OrderStatus } from "@/lib/types/order";
+import type {
+  AdminOrder,
+  AdminOrderList,
+  AdminReturnList,
+  AdminReturnRequest,
+  OrderStatus,
+  ReturnStatus,
+} from "@/lib/types/order";
 import type { AdminReview, AdminReviewList } from "@/lib/types/review";
 import type { User } from "@/lib/types/auth";
 
@@ -282,6 +289,40 @@ export async function downloadAdminFile(
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function listAdminReturns(
+  status?: ReturnStatus,
+  limit = 25,
+  offset = 0,
+): Promise<AdminReturnList> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+  return apiRequestWithAuth<AdminReturnList>(`/admin/returns?${params}`);
+}
+
+export async function updateAdminReturn(
+  returnId: number,
+  input: { status: ReturnStatus; admin_note?: string },
+): Promise<AdminReturnRequest> {
+  return apiRequestWithAuth<AdminReturnRequest>(`/admin/returns/${returnId}`, {
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export type NewsletterSubscriber = {
+  id: number;
+  email: string;
+  created_at: string;
+};
+
+export async function listNewsletterSubscribers(): Promise<
+  NewsletterSubscriber[]
+> {
+  return apiRequestWithAuth<NewsletterSubscriber[]>("/admin/newsletter");
 }
 
 export async function listAdminUsers(): Promise<User[]> {

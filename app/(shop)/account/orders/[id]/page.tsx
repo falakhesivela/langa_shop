@@ -1,18 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Check } from "lucide-react";
 import { AuthGuard } from "@/components/auth/AuthGuard";
-import { getOrder } from "@/lib/api/orders";
+import {
+  cancelOrder,
+  createReturnRequest,
+  getOrder,
+  getReturnRequest,
+} from "@/lib/api/orders";
 import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
 import { ColorSwatch } from "@/components/color-swatch";
 import { ReorderButton } from "@/components/account/reorder-button";
-import type { Order } from "@/lib/types/order";
+import type { Order, ReturnRequest } from "@/lib/types/order";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Label } from "@/components/ui/Label";
+import { useToast } from "@/components/ui/Toast";
 
 const TIMELINE: Array<{ status: Order["status"]; label: string }> = [
   { status: "pending", label: "Placed" },
@@ -26,6 +33,14 @@ function StatusTimeline({ status }: { status: Order["status"] }) {
     return (
       <p className="rounded-sm border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
         This order was cancelled.
+      </p>
+    );
+  }
+  if (status === "refunded") {
+    return (
+      <p className="rounded-sm border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
+        This order sold out before your payment was confirmed, and the full
+        amount was refunded to you.
       </p>
     );
   }
@@ -66,6 +81,102 @@ function StatusTimeline({ status }: { status: Order["status"] }) {
   );
 }
 
+const returnStatusCopy: Record<ReturnRequest["status"], string> = {
+  requested: "Return requested — we're reviewing it and will email you.",
+  approved:
+    "Return approved — check your email for the return instructions.",
+  declined: "This return request was declined.",
+  completed: "Return completed.",
+};
+
+function ReturnSection({
+  order,
+  returnRequest,
+  onCreated,
+}: {
+  order: Order;
+  returnRequest: ReturnRequest | null;
+  onCreated: (request: ReturnRequest) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (order.status !== "delivered" && !returnRequest) return null;
+
+  if (returnRequest) {
+    return (
+      <section className="mt-6 rounded-sm border border-border p-5 text-sm">
+        <p className="font-medium">{returnStatusCopy[returnRequest.status]}</p>
+        <p className="mt-2 text-muted-foreground">
+          Your reason: {returnRequest.reason}
+        </p>
+        {returnRequest.admin_note ? (
+          <p className="mt-2 text-muted-foreground">
+            Our note: {returnRequest.admin_note}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      onCreated(await createReturnRequest(order.id, reason.trim()));
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to submit the return request."));
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-sm border border-border p-5">
+      {isOpen ? (
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {error ? <Alert>{error}</Alert> : null}
+          <div className="space-y-2">
+            <Label htmlFor="return-reason">
+              What would you like to return, and why?
+            </Label>
+            <textarea
+              id="return-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={4}
+              minLength={10}
+              required
+              className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground"
+              placeholder="e.g. The linen shirt (M) is too big — I'd like to return it for a refund."
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button type="submit" isLoading={isSubmitting} disabled={reason.trim().length < 10}>
+              Submit request
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p className="text-muted-foreground">
+            Something not right? You can return unworn items within 30 days of
+            delivery.
+          </p>
+          <Button variant="secondary" onClick={() => setIsOpen(true)}>
+            Request a return
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 const addressLabels: Record<string, string> = {
   full_name: "Name",
   phone: "Phone",
@@ -80,18 +191,31 @@ const addressLabels: Record<string, string> = {
 
 function AccountOrderDetailContent() {
   const params = useParams<{ id: string }>();
+  const { toast } = useToast();
   const orderId = Number(params.id);
   const isValidId = Number.isFinite(orderId);
   const [order, setOrder] = useState<Order | null>(null);
+  const [returnRequest, setReturnRequest] = useState<ReturnRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!Number.isFinite(orderId)) return;
     let cancelled = false;
     getOrder(orderId)
       .then((data) => {
-        if (!cancelled) setOrder(data);
+        if (cancelled) return;
+        setOrder(data);
+        if (data.status === "delivered") {
+          // A return can only exist for a delivered order.
+          getReturnRequest(orderId)
+            .then((request) => {
+              if (!cancelled) setReturnRequest(request);
+            })
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(getErrorMessage(err, "Unable to load order."));
@@ -103,6 +227,26 @@ function AccountOrderDetailContent() {
       cancelled = true;
     };
   }, [orderId]);
+
+  async function handleCancelOrder() {
+    if (
+      !window.confirm(
+        "Cancel this order? This can't be undone — you can always place a new order later.",
+      )
+    ) {
+      return;
+    }
+    setCancelError(null);
+    setIsCancelling(true);
+    try {
+      setOrder(await cancelOrder(orderId));
+      toast("Order cancelled.");
+    } catch (err) {
+      setCancelError(getErrorMessage(err, "Unable to cancel this order."));
+    } finally {
+      setIsCancelling(false);
+    }
+  }
 
   if (isLoading && isValidId) {
     return (
@@ -148,6 +292,29 @@ function AccountOrderDetailContent() {
       <div className="mt-8">
         <StatusTimeline status={order.status} />
       </div>
+
+      {order.status === "pending" ? (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-border p-4 text-sm">
+          <span className="text-muted-foreground">
+            This order is still awaiting payment — you can cancel it if
+            you&apos;ve changed your mind.
+          </span>
+          <Button
+            variant="secondary"
+            onClick={() => void handleCancelOrder()}
+            isLoading={isCancelling}
+          >
+            Cancel order
+          </Button>
+        </div>
+      ) : null}
+      {cancelError ? <Alert className="mt-4">{cancelError}</Alert> : null}
+
+      <ReturnSection
+        order={order}
+        returnRequest={returnRequest}
+        onCreated={setReturnRequest}
+      />
 
       {order.tracking_reference ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-border bg-card p-4 text-sm">

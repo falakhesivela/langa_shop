@@ -8,6 +8,7 @@ const statusStyles: Record<OrderStatus, string> = {
   delivered:
     "border-emerald-600/30 bg-emerald-500/10 text-emerald-700",
   cancelled: "border-border bg-muted text-muted-foreground",
+  refunded: "border-rose-600/30 bg-rose-500/10 text-rose-700",
 };
 
 export function OrderStatusBadge({

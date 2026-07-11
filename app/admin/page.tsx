@@ -133,7 +133,8 @@ export default function AdminDashboardPage() {
       {stats &&
       (stats.catalog.out_of_stock > 0 ||
         stats.catalog.low_stock > 0 ||
-        stats.orders.paid > 0) ? (
+        stats.orders.paid > 0 ||
+        stats.orders.refunded > 0) ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {stats.orders.paid > 0 ? (
             <Link
@@ -143,6 +144,16 @@ export default function AdminDashboardPage() {
               <ShoppingBag className="size-3.5" aria-hidden />
               {stats.orders.paid} paid order{stats.orders.paid === 1 ? "" : "s"} ready
               to ship
+            </Link>
+          ) : null}
+          {stats.orders.refunded > 0 ? (
+            <Link
+              href="/admin/orders"
+              className="inline-flex items-center gap-2 rounded-sm border border-rose-600/30 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-700 transition-opacity hover:opacity-80"
+            >
+              <ShoppingBag className="size-3.5" aria-hidden />
+              {stats.orders.refunded} refunded order
+              {stats.orders.refunded === 1 ? "" : "s"}
             </Link>
           ) : null}
           {stats.catalog.out_of_stock > 0 ? (
