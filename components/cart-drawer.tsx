@@ -156,6 +156,13 @@ export function CartDrawer() {
               >
                 Checkout
               </Link>
+              <Link
+                href="/cart"
+                onClick={close}
+                className="mt-2 block w-full rounded-sm border border-border py-3 text-center text-sm font-medium uppercase tracking-widest transition-colors hover:bg-muted"
+              >
+                View bag
+              </Link>
               <p className="mt-3 text-center text-xs text-muted-foreground">
                 Shipping calculated at checkout
               </p>

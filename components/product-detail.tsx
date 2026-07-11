@@ -8,21 +8,64 @@ import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
 import { ColorSwatch } from "@/components/color-swatch"
 import { getVariantStock } from "@/lib/stock"
+import { useToast } from "@/components/ui/Toast"
+import { StockAlertForm } from "@/components/stock-alert-form"
 
-const SIZE_GUIDE_ROWS = [
-  { size: "XS", bust: "80–84", waist: "62–66", hip: "86–90" },
-  { size: "S", bust: "84–88", waist: "66–70", hip: "90–94" },
-  { size: "M", bust: "88–92", waist: "70–74", hip: "94–98" },
-  { size: "L", bust: "92–98", waist: "74–80", hip: "98–104" },
-  { size: "XL", bust: "98–104", waist: "80–86", hip: "104–110" },
-]
+type SizeGuide = {
+  columns: string[]
+  rows: string[][]
+  note: string
+}
+
+// Category-specific measurement tables (cm). Categories are matched by
+// keyword; anything unrecognized falls back to the tops guide, and one-size
+// products hide the guide entirely.
+const TOPS_GUIDE: SizeGuide = {
+  columns: ["Size", "Bust", "Waist", "Hip"],
+  rows: [
+    ["XS", "80–84", "62–66", "86–90"],
+    ["S", "84–88", "66–70", "90–94"],
+    ["M", "88–92", "70–74", "94–98"],
+    ["L", "92–98", "74–80", "98–104"],
+    ["XL", "98–104", "80–86", "104–110"],
+  ],
+  note: "Body measurements in centimetres. If between sizes, size up.",
+}
+
+const BOTTOMS_GUIDE: SizeGuide = {
+  columns: ["Size", "Waist", "Hip", "Inseam"],
+  rows: [
+    ["XS", "62–66", "86–90", "74"],
+    ["S", "66–70", "90–94", "75"],
+    ["M", "70–74", "94–98", "76"],
+    ["L", "74–80", "98–104", "77"],
+    ["XL", "80–86", "104–110", "78"],
+  ],
+  note: "Body measurements in centimetres. Inseam is the finished garment length.",
+}
+
+const BOTTOMS_KEYWORDS = ["trouser", "pant", "jean", "skirt", "short", "bottom"]
+
+function sizeGuideFor(category: string, sizes: string[]): SizeGuide | null {
+  // One-size products (accessories, bags) have nothing to measure against.
+  const onlyOneSize =
+    sizes.length <= 1 && (sizes[0] ?? "One Size").toLowerCase() === "one size"
+  if (onlyOneSize) return null
+  const normalized = category.toLowerCase()
+  if (BOTTOMS_KEYWORDS.some((keyword) => normalized.includes(keyword))) {
+    return BOTTOMS_GUIDE
+  }
+  return TOPS_GUIDE
+}
 
 function SizeGuideDialog({
   open,
   onClose,
+  guide,
 }: {
   open: boolean
   onClose: () => void
+  guide: SizeGuide
 }) {
   useEffect(() => {
     if (!open) return
@@ -59,9 +102,7 @@ function SizeGuideDialog({
             <h2 id="size-guide-title" className="font-serif text-2xl">
               Size guide
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Body measurements in centimetres. If between sizes, size up.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{guide.note}</p>
           </div>
           <button
             type="button"
@@ -75,19 +116,29 @@ function SizeGuideDialog({
         <table className="mt-6 w-full text-left text-sm">
           <thead className="border-b border-border text-muted-foreground">
             <tr>
-              <th className="py-2 pr-3 font-medium">Size</th>
-              <th className="py-2 pr-3 font-medium">Bust</th>
-              <th className="py-2 pr-3 font-medium">Waist</th>
-              <th className="py-2 font-medium">Hip</th>
+              {guide.columns.map((column, index) => (
+                <th
+                  key={column}
+                  className={`py-2 font-medium ${index < guide.columns.length - 1 ? "pr-3" : ""}`}
+                >
+                  {column}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {SIZE_GUIDE_ROWS.map((row) => (
-              <tr key={row.size} className="border-b border-border/70">
-                <td className="py-2.5 pr-3 font-medium">{row.size}</td>
-                <td className="py-2.5 pr-3 tabular-nums">{row.bust}</td>
-                <td className="py-2.5 pr-3 tabular-nums">{row.waist}</td>
-                <td className="py-2.5 tabular-nums">{row.hip}</td>
+            {guide.rows.map((row) => (
+              <tr key={row[0]} className="border-b border-border/70">
+                {row.map((cell, index) => (
+                  <td
+                    key={`${row[0]}-${index}`}
+                    className={`py-2.5 ${index < row.length - 1 ? "pr-3" : ""} ${
+                      index === 0 ? "font-medium" : "tabular-nums"
+                    }`}
+                  >
+                    {cell}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -99,6 +150,7 @@ function SizeGuideDialog({
 
 export function ProductPurchase({ product }: { product: Product }) {
   const { addItem, items } = useCart()
+  const { toast } = useToast()
   const { isSaved, toggle } = useWishlist()
   const saved = isSaved(product.id)
   const [size, setSize] = useState(product.sizes.length === 1 ? product.sizes[0] : "")
@@ -106,6 +158,7 @@ export function ProductPurchase({ product }: { product: Product }) {
     product.colors.length === 1 ? product.colors[0] : "",
   )
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
+  const sizeGuide = sizeGuideFor(product.category, product.sizes)
   const hasVariants = Object.keys(product.variantStock).length > 0
   const selectedStock =
     size || product.sizes.length === 1
@@ -165,7 +218,7 @@ export function ProductPurchase({ product }: { product: Product }) {
     }
     const resolvedSize = size || product.sizes[0]
     const resolvedColor = color || (product.colors[0] ?? "")
-    await addItem(
+    const added = await addItem(
       {
         productId: product.id,
         slug: product.slug,
@@ -184,11 +237,20 @@ export function ProductPurchase({ product }: { product: Product }) {
       },
       Math.min(effectiveQty, remaining),
     )
+    if (added) {
+      toast(`${product.name} added to your bag.`)
+    }
   }
 
   return (
     <div>
-      <SizeGuideDialog open={sizeGuideOpen} onClose={() => setSizeGuideOpen(false)} />
+      {sizeGuide ? (
+        <SizeGuideDialog
+          open={sizeGuideOpen}
+          onClose={() => setSizeGuideOpen(false)}
+          guide={sizeGuide}
+        />
+      ) : null}
       <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">{product.category}</p>
       <h1 className="mt-3 font-serif text-4xl leading-tight md:text-5xl">{product.name}</h1>
       <div className="mt-4 flex items-baseline gap-3">
@@ -208,13 +270,15 @@ export function ProductPurchase({ product }: { product: Product }) {
           <span className="text-sm font-medium uppercase tracking-wide">
             Size {product.sizes.length === 1 && <span className="text-muted-foreground">— One size</span>}
           </span>
-          <button
-            type="button"
-            onClick={() => setSizeGuideOpen(true)}
-            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            Size guide
-          </button>
+          {sizeGuide ? (
+            <button
+              type="button"
+              onClick={() => setSizeGuideOpen(true)}
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Size guide
+            </button>
+          ) : null}
         </div>
         {product.sizes.length > 1 && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -344,7 +408,16 @@ export function ProductPurchase({ product }: { product: Product }) {
         </p>
       )}
       {outOfStock && (
-        <p className="mt-3 text-sm text-accent">This item is currently out of stock.</p>
+        <>
+          <p className="mt-3 text-sm text-accent">
+            This item is currently out of stock.
+          </p>
+          <StockAlertForm
+            productId={product.id}
+            size={size || product.sizes[0]}
+            color={color || product.colors[0]}
+          />
+        </>
       )}
 
       {/* Details */}
@@ -389,6 +462,7 @@ export function ProductGallery({ product }: { product: Product }) {
 
   const [activeIndex, setActiveIndex] = useState(0)
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const hasMultiple = images.length > 1
   const safeIndex = Math.min(activeIndex, Math.max(images.length - 1, 0))
   const active = images[safeIndex]
@@ -398,6 +472,27 @@ export function ProductGallery({ product }: { product: Product }) {
     const next = ((index % images.length) + images.length) % images.length
     setActiveIndex(next)
   }
+
+  // Lock scroll and handle keys while the zoom overlay is open.
+  useEffect(() => {
+    if (!lightboxOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false)
+      if (e.key === "ArrowLeft") {
+        setActiveIndex((i) => (i - 1 + images.length) % images.length)
+      }
+      if (e.key === "ArrowRight") {
+        setActiveIndex((i) => (i + 1) % images.length)
+      }
+    }
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [lightboxOpen, images.length])
 
   function onKeyDown(e: KeyboardEvent) {
     if (!hasMultiple) return
@@ -454,6 +549,15 @@ export function ProductGallery({ product }: { product: Product }) {
             className="object-cover"
           />
         )}
+
+        {active ? (
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            aria-label="Zoom image"
+            className="absolute inset-0 z-[5] cursor-zoom-in"
+          />
+        ) : null}
 
         {product.badge && (
           <span className="absolute left-4 top-4 z-10 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium uppercase tracking-wide backdrop-blur">
@@ -520,6 +624,63 @@ export function ProductGallery({ product }: { product: Product }) {
           })}
         </div>
       )}
+
+      {lightboxOpen && active ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${product.name} image zoom`}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/95"
+        >
+          <button
+            type="button"
+            aria-label="Close zoom"
+            onClick={() => setLightboxOpen(false)}
+            className="absolute inset-0 cursor-zoom-out"
+          />
+          <div className="pointer-events-none relative h-[88vh] w-[94vw] max-w-6xl">
+            <Image
+              key={active.id}
+              src={active.url || "/placeholder.svg"}
+              alt={active.altText || product.name}
+              fill
+              sizes="94vw"
+              className="object-contain"
+            />
+          </div>
+          <button
+            type="button"
+            aria-label="Close zoom"
+            onClick={() => setLightboxOpen(false)}
+            className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-full bg-background/90 text-foreground backdrop-blur transition-colors hover:bg-background"
+          >
+            <X className="size-5" />
+          </button>
+          {hasMultiple ? (
+            <>
+              <button
+                type="button"
+                aria-label="Previous image"
+                onClick={() => goTo(safeIndex - 1)}
+                className="absolute left-4 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground backdrop-blur transition-colors hover:bg-background"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next image"
+                onClick={() => goTo(safeIndex + 1)}
+                className="absolute right-4 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground backdrop-blur transition-colors hover:bg-background"
+              >
+                <ChevronRight className="size-5" />
+              </button>
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] tabular-nums tracking-wide text-foreground backdrop-blur">
+                {safeIndex + 1} / {images.length}
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }

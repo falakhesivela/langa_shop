@@ -76,7 +76,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (authLoading) return
-    void loadWishlist()
+    // Deferred so the effect body itself performs no synchronous setState.
+    const id = window.setTimeout(() => void loadWishlist(), 0)
+    return () => window.clearTimeout(id)
   }, [authLoading, loadWishlist])
 
   // Cross-tab sync for guests (members are server-backed).

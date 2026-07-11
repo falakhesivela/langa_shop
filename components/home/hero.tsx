@@ -30,7 +30,7 @@ export async function Hero() {
           src={imageSrc}
           alt={promo?.title ?? `Model wearing the ${APP_NAME} collection`}
           fill
-          preload
+          priority
           sizes="100vw"
           className="object-cover"
         />

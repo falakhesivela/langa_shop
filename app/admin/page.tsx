@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
           {stats.orders.paid > 0 ? (
             <Link
               href="/admin/orders"
-              className="inline-flex items-center gap-2 rounded-sm border border-blue-600/30 bg-blue-500/10 px-3 py-1.5 text-sm text-blue-700 transition-opacity hover:opacity-80 dark:text-blue-400"
+              className="inline-flex items-center gap-2 rounded-sm border border-blue-600/30 bg-blue-500/10 px-3 py-1.5 text-sm text-blue-700 transition-opacity hover:opacity-80"
             >
               <ShoppingBag className="size-3.5" aria-hidden />
               {stats.orders.paid} paid order{stats.orders.paid === 1 ? "" : "s"} ready
@@ -148,7 +148,7 @@ export default function AdminDashboardPage() {
           {stats.catalog.out_of_stock > 0 ? (
             <Link
               href="/admin/products"
-              className="inline-flex items-center gap-2 rounded-sm border border-red-600/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-700 transition-opacity hover:opacity-80 dark:text-red-400"
+              className="inline-flex items-center gap-2 rounded-sm border border-red-600/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-700 transition-opacity hover:opacity-80"
             >
               <AlertTriangle className="size-3.5" aria-hidden />
               {stats.catalog.out_of_stock} product
@@ -158,7 +158,7 @@ export default function AdminDashboardPage() {
           {stats.catalog.low_stock > 0 ? (
             <Link
               href="/admin/products"
-              className="inline-flex items-center gap-2 rounded-sm border border-amber-600/30 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-700 transition-opacity hover:opacity-80 dark:text-amber-400"
+              className="inline-flex items-center gap-2 rounded-sm border border-amber-600/30 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-700 transition-opacity hover:opacity-80"
             >
               <AlertTriangle className="size-3.5" aria-hidden />
               {stats.catalog.low_stock} product
@@ -260,8 +260,8 @@ export default function AdminDashboardPage() {
                         <span
                           className={`shrink-0 text-sm ${
                             product.stock === 0
-                              ? "text-red-600 dark:text-red-400"
-                              : "text-amber-700 dark:text-amber-400"
+                              ? "text-red-600"
+                              : "text-amber-700"
                           }`}
                         >
                           {product.stock === 0

@@ -101,27 +101,8 @@ export function ProductForm({ product }: ProductFormProps) {
     void listCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
-  useEffect(() => {
-    if (!isEditing) {
-      setSlug(slugify(name));
-    }
-  }, [name, isEditing]);
-
-  // Seed missing combo keys when sizes/colors change so the matrix stays complete.
-  useEffect(() => {
-    if (!useVariantMatrix) return;
-    setVariantStock((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const combo of combos) {
-        if (next[combo.key] === undefined) {
-          next[combo.key] = "0";
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [combos, useVariantMatrix]);
+  // Note: missing variant-combo keys are treated as "0" everywhere they're
+  // read (inputs, total, submit), so the matrix never needs seeding.
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,7 +111,7 @@ export function ProductForm({ product }: ProductFormProps) {
 
     const parsedSizes = parseSizes(sizes);
     let nextStock = Number(stock);
-    let nextVariantStock: Record<string, number> = {};
+    const nextVariantStock: Record<string, number> = {};
 
     if (useVariantMatrix) {
       for (const combo of buildVariantCombos(parsedSizes, colors)) {
@@ -192,7 +173,16 @@ export function ProductForm({ product }: ProductFormProps) {
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              // Auto-slug while creating; leave the slug alone when editing.
+              if (!isEditing) setSlug(slugify(e.target.value))
+            }}
+            required
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="slug">Slug</Label>

@@ -80,14 +80,18 @@ export function PromotionManager() {
   }
 
   useEffect(() => {
-    void loadPromotions().catch(() => setPromotions([]));
+    let cancelled = false;
+    listPromotions()
+      .then((data) => {
+        if (!cancelled) setPromotions(data);
+      })
+      .catch(() => {
+        if (!cancelled) setPromotions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  useEffect(() => {
-    if (editingId == null) {
-      setForm((current) => ({ ...current, slug: slugify(current.name) }));
-    }
-  }, [form.name, editingId]);
 
   function startEdit(promotion: Promotion) {
     setEditingId(promotion.id);
@@ -198,7 +202,15 @@ export function PromotionManager() {
             <Input
               id="promo-name"
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onChange={(e) =>
+                setForm((current) => ({
+                  ...current,
+                  name: e.target.value,
+                  // Auto-slug while creating; leave the slug alone when editing.
+                  slug:
+                    editingId == null ? slugify(e.target.value) : current.slug,
+                }))
+              }
               required
             />
           </div>

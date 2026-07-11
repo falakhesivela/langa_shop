@@ -103,7 +103,7 @@ export default function AdminCustomerDetailPage() {
           </span>
         ) : null}
         {user.is_admin ? (
-          <span className="rounded-full border border-blue-600/30 bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+          <span className="rounded-full border border-blue-600/30 bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700">
             Admin
           </span>
         ) : null}

@@ -27,7 +27,7 @@ export default async function HomePage() {
       <Suspense fallback={<ProductRailSkeleton rows={2} />}>
         <FeaturedProducts />
       </Suspense>
-      <Suspense fallback={null}>
+      <Suspense fallback={<ProductRailSkeleton rows={1} />}>
         <SaleProducts />
       </Suspense>
       <EditorialSplit />

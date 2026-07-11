@@ -26,8 +26,8 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const variantStyles: Record<ToastVariant, string> = {
   success:
-    "border-emerald-600/30 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100",
-  error: "border-red-600/30 bg-red-50 text-red-900 dark:bg-red-950 dark:text-red-100",
+    "border-emerald-600/30 bg-emerald-50 text-emerald-900",
+  error: "border-red-600/30 bg-red-50 text-red-900",
   info: "border-border bg-card text-foreground",
 };
 

@@ -13,10 +13,10 @@ export async function SaleProducts() {
 
   try {
     const [saleProducts, promotions] = await Promise.all([
-      listProducts({ on_sale: true, sort: "featured" }),
+      listProducts({ on_sale: true, sort: "featured", limit: 4 }),
       listActivePromotions("sale_collection"),
     ])
-    products = saleProducts.slice(0, 4).map(mapShopProduct)
+    products = saleProducts.map(mapShopProduct)
     promo = promotions[0] ?? null
   } catch {
     return null

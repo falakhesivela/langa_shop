@@ -10,6 +10,7 @@ import {
   Menu,
   Package,
   ShoppingBag,
+  Star,
   Store,
   Tags,
   Ticket,
@@ -37,6 +38,7 @@ const navSections = [
     links: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
       { href: "/admin/users", label: "Customers", icon: Users },
+      { href: "/admin/reviews", label: "Reviews", icon: Star },
     ],
   },
   {

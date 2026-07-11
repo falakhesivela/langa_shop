@@ -29,20 +29,23 @@ export default function AdminUsersPage() {
     );
   }, [users, search]);
 
-  async function loadUsers() {
-    setIsLoading(true);
-    try {
-      setUsers(await listAdminUsers());
-      setError(null);
-    } catch (err) {
-      setError(getErrorMessage(err, "Unable to load users."));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void loadUsers();
+    let cancelled = false;
+    listAdminUsers()
+      .then((data) => {
+        if (cancelled) return;
+        setUsers(data);
+        setError(null);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(getErrorMessage(err, "Unable to load users."));
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleToggle(

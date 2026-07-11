@@ -67,6 +67,9 @@ export type ProductUpdateInput = Partial<ProductCreateInput>;
 export type CategoryInput = {
   name: string;
   slug: string;
+  description?: string | null;
+  image_url?: string | null;
+  sort_order?: number;
 };
 
 export type PromotionInput = {

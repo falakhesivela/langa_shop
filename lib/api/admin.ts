@@ -12,6 +12,7 @@ import type {
   PromotionInput,
 } from "@/lib/types/admin";
 import type { AdminOrder, AdminOrderList, OrderStatus } from "@/lib/types/order";
+import type { AdminReview, AdminReviewList } from "@/lib/types/review";
 import type { User } from "@/lib/types/auth";
 
 export async function getAdminStats(): Promise<AdminStats> {
@@ -109,6 +110,30 @@ export async function updatePromotion(
 
 export async function deletePromotion(id: number): Promise<void> {
   return apiRequestWithAuth<void>(`/promotions/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listAdminReviews(
+  status?: "pending" | "approved",
+  limit = 25,
+  offset = 0,
+): Promise<AdminReviewList> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+  return apiRequestWithAuth<AdminReviewList>(`/admin/reviews?${params}`);
+}
+
+export async function approveAdminReview(reviewId: number): Promise<AdminReview> {
+  return apiRequestWithAuth<AdminReview>(`/admin/reviews/${reviewId}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function deleteAdminReview(reviewId: number): Promise<void> {
+  return apiRequestWithAuth<void>(`/admin/reviews/${reviewId}`, {
     method: "DELETE",
   });
 }
@@ -231,6 +256,32 @@ export async function createAdminShipment(orderId: number): Promise<AdminOrder> 
   return apiRequestWithAuth<AdminOrder>(`/admin/orders/${orderId}/shipment`, {
     method: "POST",
   });
+}
+
+/** Fetches an authenticated admin file (e.g. CSV export) and triggers a
+ * browser download. */
+export async function downloadAdminFile(
+  path: string,
+  filename: string,
+): Promise<void> {
+  const { getAccessToken } = await import("@/lib/auth/storage");
+  const { API_BASE_URL } = await import("@/lib/config");
+  const token = getAccessToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) {
+    throw new Error(`Export failed (${response.status}).`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 export async function listAdminUsers(): Promise<User[]> {

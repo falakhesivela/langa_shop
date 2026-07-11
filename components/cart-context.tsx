@@ -54,7 +54,10 @@ type CartContextValue = {
   error: string | null
   open: () => void
   close: () => void
-  addItem: (item: Omit<CartItem, "qty" | "cartItemId">, qty?: number) => Promise<void>
+  addItem: (
+    item: Omit<CartItem, "qty" | "cartItemId">,
+    qty?: number,
+  ) => Promise<boolean>
   updateQuantity: (slug: string, size: string, color: string, qty: number) => Promise<void>
   removeItem: (slug: string, size: string, color: string) => Promise<void>
   checkout: () => Promise<void>
@@ -195,7 +198,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (authLoading) return
-    void loadCart()
+    // Deferred so the effect body itself performs no synchronous setState.
+    const id = window.setTimeout(() => void loadCart(), 0)
+    return () => window.clearTimeout(id)
   }, [authLoading, loadCart])
 
   const addItem = useCallback(
@@ -209,7 +214,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (stock <= 0) {
           setError("This item is out of stock.")
           setIsOpen(true)
-          return
+          return false
         }
 
         let blocked = false
@@ -252,8 +257,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
               : `Only ${stock} left in stock — your bag already has the maximum.`,
           )
           setIsOpen(true)
+          return false
         }
-        return
+        return true
       }
 
       try {
@@ -264,9 +270,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
           quantity: addQty,
         })
         await loadCart()
+        return true
       } catch (err) {
         setError(getErrorMessage(err, "Unable to add item to bag."))
         setIsOpen(true)
+        return false
       }
     },
     [isAuthenticated, loadCart],

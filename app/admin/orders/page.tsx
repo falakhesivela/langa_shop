@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listAdminOrders } from "@/lib/api/admin";
+import { downloadAdminFile, listAdminOrders } from "@/lib/api/admin";
+import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/products";
 import type { AdminOrder, OrderStatus } from "@/lib/types/order";
@@ -36,6 +37,8 @@ type LoadedOrders = {
 };
 
 export default function AdminOrdersPage() {
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -90,13 +93,45 @@ export default function AdminOrdersPage() {
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = Math.min(total, (page + 1) * PAGE_SIZE);
 
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) params.set("status", statusFilter);
+      const q = debouncedSearch.trim();
+      if (q) params.set("q", q);
+      if (dateFrom) params.set("date_from", `${dateFrom}T00:00:00`);
+      if (dateTo) params.set("date_to", `${dateTo}T23:59:59`);
+      const suffix = params.size > 0 ? `?${params}` : "";
+      await downloadAdminFile(
+        `/admin/export/orders.csv${suffix}`,
+        `orders-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      toast("Orders exported.");
+    } catch (err) {
+      toast(getErrorMessage(err, "Unable to export orders."), "error");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <div>
-      <div>
-        <h1 className="font-serif text-4xl">Orders</h1>
-        <p className="mt-2 text-muted-foreground">
-          Review customer orders and update fulfillment status.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-4xl">Orders</h1>
+          <p className="mt-2 text-muted-foreground">
+            Review customer orders and update fulfillment status.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleExport()}
+          disabled={isExporting}
+          className="rounded-sm border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+        >
+          {isExporting ? "Exporting…" : "Export CSV"}
+        </button>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">

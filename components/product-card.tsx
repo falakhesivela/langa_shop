@@ -6,9 +6,11 @@ import { Heart } from "lucide-react"
 import { type Product, formatPrice } from "@/lib/products"
 import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
+import { useToast } from "@/components/ui/Toast"
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
+  const { toast } = useToast()
   const { isSaved, toggle } = useWishlist()
   const saved = isSaved(product.id)
   const hasMultipleSizes = product.sizes.length > 1
@@ -73,7 +75,9 @@ export function ProductCard({ product }: { product: Product }) {
                 sharesProductStock: Object.keys(product.variantStock).length === 0,
               },
               1,
-            )
+            ).then((added) => {
+              if (added) toast(`${product.name} added to your bag.`)
+            })
           }}
           className="absolute bottom-3 left-1/2 w-[calc(100%-1.5rem)] -translate-x-1/2 rounded-sm bg-background/95 py-3 text-xs font-medium uppercase tracking-widest backdrop-blur transition-all duration-300 hover:bg-accent hover:text-accent-foreground opacity-100 md:translate-y-2 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
         >

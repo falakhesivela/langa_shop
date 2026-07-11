@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   deleteProduct,
+  downloadAdminFile,
   listAdminProducts,
   listCategories,
   updateProduct,
@@ -41,25 +42,26 @@ export default function AdminProductsPage() {
   const [stockDraft, setStockDraft] = useState("");
   const [isSavingStock, setIsSavingStock] = useState(false);
 
-  async function loadProducts() {
-    setIsLoading(true);
-    try {
-      const [productList, categoryList] = await Promise.all([
-        listAdminProducts(),
-        listCategories(),
-      ]);
-      setProducts(productList);
-      setCategories(categoryList);
-    } catch (err) {
-      setError(getErrorMessage(err, "Unable to load products."));
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
-    void loadProducts();
-  }, []);
+    let cancelled = false;
+    Promise.all([listAdminProducts(), listCategories()])
+      .then(([productList, categoryList]) => {
+        if (cancelled) return;
+        setProducts(productList);
+        setCategories(categoryList);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(getErrorMessage(err, "Unable to load products."));
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadTick]);
 
   const categoryNameById = useMemo(() => {
     const map = new Map<number, string>();
@@ -128,7 +130,7 @@ export default function AdminProductsPage() {
       } else {
         toast("Product deleted.");
       }
-      await loadProducts();
+      setReloadTick((tick) => tick + 1);
     } catch (err) {
       setError(getErrorMessage(err, "Unable to delete product."));
     }
@@ -142,14 +144,35 @@ export default function AdminProductsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-4xl">Products</h1>
           <p className="mt-2 text-muted-foreground">
             Manage storefront products and images.
           </p>
         </div>
-        <Button href="/admin/products/new">Add product</Button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              void downloadAdminFile(
+                "/admin/export/products.csv",
+                `products-${new Date().toISOString().slice(0, 10)}.csv`,
+              )
+                .then(() => toast("Products exported."))
+                .catch((err) =>
+                  toast(
+                    getErrorMessage(err, "Unable to export products."),
+                    "error",
+                  ),
+                )
+            }
+            className="rounded-sm border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Export CSV
+          </button>
+          <Button href="/admin/products/new">Add product</Button>
+        </div>
       </div>
 
       {error ? <Alert className="mt-6">{error}</Alert> : null}
@@ -318,9 +341,9 @@ export default function AdminProductsPage() {
                         <span
                           className={
                             product.stock === 0
-                              ? "font-medium text-red-600 dark:text-red-400"
+                              ? "font-medium text-red-600"
                               : product.stock <= LOW_STOCK_THRESHOLD
-                                ? "font-medium text-amber-700 dark:text-amber-400"
+                                ? "font-medium text-amber-700"
                                 : ""
                           }
                         >

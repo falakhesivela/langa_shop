@@ -62,7 +62,14 @@ function AccountOrdersContent() {
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="font-medium">Order #{order.id}</h2>
+                  <h2 className="font-medium">
+                    <Link
+                      href={`/account/orders/${order.id}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Order #{order.id}
+                    </Link>
+                  </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {new Date(order.created_at).toLocaleString()}
                   </p>
@@ -95,28 +102,39 @@ function AccountOrdersContent() {
                 ))}
               </ul>
 
-              {order.tracking_reference ? (
-                <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4 text-sm">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4 text-sm">
+                {order.tracking_reference ? (
                   <span className="text-muted-foreground">
                     {order.shipping_service_name ?? "Shipment"}
                     {order.shipment_status
                       ? ` · ${order.shipment_status.replace(/[-_]/g, " ")}`
                       : ""}
+                    {" · "}
+                    {order.tracking_url ? (
+                      <a
+                        href={order.tracking_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-foreground underline underline-offset-4"
+                      >
+                        Track {order.tracking_reference}
+                      </a>
+                    ) : (
+                      <span className="font-medium text-foreground">
+                        {order.tracking_reference}
+                      </span>
+                    )}
                   </span>
-                  {order.tracking_url ? (
-                    <a
-                      href={order.tracking_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium underline underline-offset-4"
-                    >
-                      Track {order.tracking_reference}
-                    </a>
-                  ) : (
-                    <span className="font-medium">{order.tracking_reference}</span>
-                  )}
-                </div>
-              ) : null}
+                ) : (
+                  <span />
+                )}
+                <Link
+                  href={`/account/orders/${order.id}`}
+                  className="font-medium underline-offset-4 hover:underline"
+                >
+                  View details
+                </Link>
+              </div>
             </article>
           ))
         )}

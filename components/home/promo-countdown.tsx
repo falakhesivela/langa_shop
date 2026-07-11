@@ -30,11 +30,14 @@ export function PromoCountdown({
   const [remaining, setRemaining] = useState<Remaining | null>(null)
 
   useEffect(() => {
-    setRemaining(getRemaining(endsAt))
-    const id = window.setInterval(() => {
-      setRemaining(getRemaining(endsAt))
-    }, 1_000)
-    return () => window.clearInterval(id)
+    const tick = () => setRemaining(getRemaining(endsAt))
+    // First tick is deferred a frame so the effect body stays setState-free.
+    const initial = window.setTimeout(tick, 0)
+    const id = window.setInterval(tick, 1_000)
+    return () => {
+      window.clearTimeout(initial)
+      window.clearInterval(id)
+    }
   }, [endsAt])
 
   if (!remaining) return null

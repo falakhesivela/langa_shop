@@ -7,9 +7,9 @@ import { mapShopProduct } from "@/lib/products"
 export async function FeaturedProducts() {
   let featured: ReturnType<typeof mapShopProduct>[] = []
   try {
-    featured = (await listProducts({ sort: "featured" }))
-      .slice(0, 8)
-      .map(mapShopProduct)
+    featured = (await listProducts({ sort: "featured", limit: 8 })).map(
+      mapShopProduct,
+    )
   } catch {
     return null
   }

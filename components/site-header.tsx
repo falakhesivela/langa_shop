@@ -1,12 +1,13 @@
 "use client"
 
-import { FormEvent, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Search, ShoppingBag, Menu, X, User, Heart } from "lucide-react"
 import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
 import { BrandLogo } from "@/components/brand-logo"
+import { SearchTypeahead } from "@/components/search-typeahead"
 import { useAuth } from "@/lib/auth/context"
 import { APP_NAME } from "@/lib/config"
 import { listCategories } from "@/lib/api/categories"
@@ -17,11 +18,9 @@ export function SiteHeader() {
   const { count: wishlistCount } = useWishlist()
   const { user } = useAuth()
   const pathname = usePathname()
-  const router = useRouter()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [searchValue, setSearchValue] = useState("")
   const [navLinks, setNavLinks] = useState([
     { href: "/products", label: "Shop All" },
   ])
@@ -33,10 +32,14 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
-  useEffect(() => {
+  // Close overlays when the route changes — done as a render-time state
+  // adjustment (React's recommended pattern) instead of an effect.
+  const [lastPathname, setLastPathname] = useState(pathname)
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname)
     setMenuOpen(false)
     setSearchOpen(false)
-  }, [pathname])
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -81,17 +84,6 @@ export function SiteHeader() {
       document.removeEventListener("keydown", onKey)
     }
   }, [menuOpen])
-
-  function handleSearch(event: FormEvent) {
-    event.preventDefault()
-    const q = searchValue.trim()
-    setSearchOpen(false)
-    if (!q) {
-      router.push("/products")
-      return
-    }
-    router.push(`/products?search=${encodeURIComponent(q)}`)
-  }
 
   return (
     <>
@@ -172,37 +164,7 @@ export function SiteHeader() {
         </div>
 
         {searchOpen ? (
-          <div className="border-t border-border bg-background/95 px-5 py-3 backdrop-blur-md lg:px-8">
-            <form
-              onSubmit={handleSearch}
-              className="mx-auto flex max-w-7xl items-center gap-3"
-            >
-              <Search className="size-4 shrink-0 text-muted-foreground" />
-              <input
-                autoFocus
-                type="search"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search products…"
-                aria-label="Search products"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              />
-              <button
-                type="submit"
-                className="shrink-0 text-sm font-medium uppercase tracking-wide text-accent"
-              >
-                Search
-              </button>
-              <button
-                type="button"
-                aria-label="Close search"
-                onClick={() => setSearchOpen(false)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full hover:bg-muted"
-              >
-                <X className="size-4" />
-              </button>
-            </form>
-          </div>
+          <SearchTypeahead onClose={() => setSearchOpen(false)} />
         ) : null}
       </header>
 

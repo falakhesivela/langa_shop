@@ -123,8 +123,22 @@ function CheckoutCallbackContent() {
       <main className="mx-auto max-w-2xl px-5 py-16">
         <h1 className="font-serif text-4xl">Payment verification failed</h1>
         <Alert className="mt-6">{error}</Alert>
-        <div className="mt-8">
-          <Button href="/">Continue shopping</Button>
+        <p className="mt-4 text-sm text-muted-foreground">
+          This can be a temporary glitch — if you completed the payment, checking
+          again usually resolves it. Your card is never charged twice.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Button
+            onClick={() => {
+              setError(null);
+              setHasVerified(false);
+            }}
+          >
+            Check again
+          </Button>
+          <Button variant="secondary" href="/checkout">
+            Back to checkout
+          </Button>
         </div>
       </main>
     );
@@ -141,7 +155,7 @@ function CheckoutCallbackContent() {
       <p className="mt-4 text-muted-foreground">
         {isSuccess
           ? "Your payment was confirmed. We will prepare your order for shipping."
-          : "Your payment could not be confirmed. You can try checkout again from your cart."}
+          : "Your payment could not be confirmed. Your bag is untouched — you can try again below, or check once more if you did complete the payment."}
       </p>
 
       {order ? (
@@ -203,10 +217,25 @@ function CheckoutCallbackContent() {
         </p>
       ) : null}
 
-      <div className="mt-8 flex flex-wrap gap-4">
-        {isAuthenticated ? (
-          <Button href="/account/orders">View orders</Button>
-        ) : null}
+      <div className="mt-8 flex flex-wrap items-center gap-4">
+        {isSuccess ? (
+          isAuthenticated ? (
+            <Button href="/account/orders">View orders</Button>
+          ) : null
+        ) : (
+          <>
+            <Button href="/checkout">Try payment again</Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setError(null);
+                setHasVerified(false);
+              }}
+            >
+              Check payment again
+            </Button>
+          </>
+        )}
         <Link
           href="/"
           className="inline-flex items-center text-sm font-medium uppercase tracking-wide text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

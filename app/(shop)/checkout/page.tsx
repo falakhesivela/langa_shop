@@ -283,13 +283,9 @@ export default function CheckoutPage() {
                 <Label htmlFor="full_name">Full name</Label>
                 <Input id="full_name" value={form.full_name} onChange={(e) => updateField("full_name", e.target.value)} required={!isAuthenticated} />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" type="tel" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} required={!isAuthenticated} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="postal_code">Postal code</Label>
-                <Input id="postal_code" value={form.postal_code} onChange={(e) => updateField("postal_code", e.target.value)} required />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="address1">Street address</Label>
@@ -318,9 +314,21 @@ export default function CheckoutPage() {
                 <Label htmlFor="city">City</Label>
                 <Input id="city" value={form.city} onChange={(e) => updateField("city", e.target.value)} required />
               </div>
-              <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="province">Province</Label>
                 <Input id="province" value={form.province} onChange={(e) => updateField("province", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postal_code">Postal code</Label>
+                <Input
+                  id="postal_code"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="e.g. 8001"
+                  value={form.postal_code}
+                  onChange={(e) => updateField("postal_code", e.target.value)}
+                  required
+                />
               </div>
             </div>
 
@@ -438,7 +446,7 @@ export default function CheckoutPage() {
               </div>
             )}
             {discountError ? (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p className="text-sm text-red-600">
                 {discountError}
               </p>
             ) : null}

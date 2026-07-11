@@ -52,3 +52,37 @@ export async function logoutUser(): Promise<void> {
 export async function getCurrentUserWithAuth(): Promise<User> {
   return apiRequestWithAuth<User>("/auth/me");
 }
+
+export async function forgotPassword(email: string): Promise<void> {
+  await apiRequest("/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<void> {
+  await apiRequest("/auth/reset-password", {
+    method: "POST",
+    body: { token, new_password: newPassword },
+  });
+}
+
+export async function updateProfile(fullName: string): Promise<User> {
+  return apiRequestWithAuth<User>("/auth/me", {
+    method: "PATCH",
+    body: { full_name: fullName },
+  });
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await apiRequestWithAuth("/auth/change-password", {
+    method: "POST",
+    body: { current_password: currentPassword, new_password: newPassword },
+  });
+}

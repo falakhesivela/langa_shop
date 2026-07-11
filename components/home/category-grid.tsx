@@ -10,6 +10,7 @@ type CategoryTile = {
   href: string
   image: string
   count: number
+  description: string | null
 }
 
 export async function CategoryGrid() {
@@ -21,16 +22,22 @@ export async function CategoryGrid() {
       listProducts({ sort: "featured" }),
     ])
 
+    // Categories arrive pre-sorted by the admin's sort order. An uploaded
+    // category image wins; otherwise fall back to a product image.
     categories = apiCategories.slice(0, 6).map((cat) => {
       const inCategory = products.filter(
         (product) => product.category?.toLowerCase() === cat.name.toLowerCase(),
       )
       const match = inCategory.find((product) => product.image)
+      const fallback = match?.image
+        ? resolveMediaUrl(match.image)
+        : "/placeholder.svg"
       return {
         name: cat.name,
         href: `/products?category=${encodeURIComponent(cat.name)}`,
-        image: match?.image ? resolveMediaUrl(match.image) : "/placeholder.svg",
+        image: cat.image_url ? resolveMediaUrl(cat.image_url) : fallback,
         count: inCategory.length,
+        description: cat.description,
       }
     })
   } catch {
@@ -116,6 +123,11 @@ function CategoryCard({
           <h3 className={`font-serif ${large ? "text-3xl lg:text-4xl" : "text-2xl"}`}>
             {category.name}
           </h3>
+          {large && category.description ? (
+            <p className="mt-1 max-w-md text-sm text-white/85">
+              {category.description}
+            </p>
+          ) : null}
           {category.count > 0 ? (
             <p className="mt-1 text-xs uppercase tracking-widest text-white/75">
               {category.count} {category.count === 1 ? "piece" : "pieces"}

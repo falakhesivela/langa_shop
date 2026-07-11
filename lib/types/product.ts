@@ -33,6 +33,9 @@ export type Category = {
   id: number;
   name: string;
   slug: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number;
 };
 
 export type ProductSort = "featured" | "price_asc" | "price_desc";
@@ -43,6 +46,19 @@ export type ListProductsParams = {
   sort?: ProductSort;
   is_active?: boolean;
   on_sale?: boolean;
+  /** Effective (charged) price bounds, in cents. */
+  min_price?: number;
+  max_price?: number;
+  size?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export type ShopProductList = {
+  items: ShopProduct[];
+  total: number;
+  limit: number | null;
+  offset: number;
 };
 
 export type PromotionPlacement = "announcement" | "hero" | "sale_collection";
