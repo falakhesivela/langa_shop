@@ -17,3 +17,13 @@ export const SITE_URL =
 /** Client-side Google Maps / Places key. Leave empty to disable address autocomplete. */
 export const GOOGLE_MAPS_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+
+/** OAuth client ID used by the admin Google Drive image picker.
+ * Leave either Drive value empty to hide the Drive option. */
+export const GOOGLE_DRIVE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID ?? "";
+
+/** API key for the Google Picker API. Distinct from the Maps key because each
+ * key is restricted to its own API. */
+export const GOOGLE_DRIVE_API_KEY =
+  process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY ?? "";

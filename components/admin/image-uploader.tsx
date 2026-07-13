@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { uploadFileToR2 } from "@/lib/api/admin";
 import type { ProductImageInput } from "@/lib/types/admin";
 import { getErrorMessage } from "@/lib/api/errors";
+import { isDrivePickerEnabled, pickImagesFromDrive } from "@/lib/drive/load-picker";
 import { resolveMediaUrl } from "@/lib/media";
 import { Button } from "@/components/ui/Button";
 
@@ -21,11 +22,13 @@ export function ImageUploader({
 }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPickingFromDrive, setIsPickingFromDrive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewByUrl, setPreviewByUrl] = useState<Record<string, string>>({});
+  const driveEnabled = isDrivePickerEnabled();
 
-  async function handleFiles(fileList: FileList | null) {
-    if (!fileList?.length) return;
+  async function handleFiles(files: File[]) {
+    if (!files.length) return;
 
     setIsUploading(true);
     setError(null);
@@ -34,7 +37,7 @@ export function ImageUploader({
       const uploaded: ProductImageInput[] = [];
       const nextPreviews: Record<string, string> = {};
 
-      for (const file of Array.from(fileList)) {
+      for (const file of files) {
         const publicUrl = await uploadFileToR2(file);
         nextPreviews[publicUrl] = URL.createObjectURL(file);
         uploaded.push({
@@ -54,6 +57,19 @@ export function ImageUploader({
       if (inputRef.current) {
         inputRef.current.value = "";
       }
+    }
+  }
+
+  async function handleDriveImport() {
+    setIsPickingFromDrive(true);
+    setError(null);
+
+    try {
+      await handleFiles(await pickImagesFromDrive());
+    } catch (err) {
+      setError(getErrorMessage(err, "Google Drive import failed."));
+    } finally {
+      setIsPickingFromDrive(false);
     }
   }
 
@@ -95,24 +111,43 @@ export function ImageUploader({
             Images
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Upload to Cloudflare R2. First image is primary unless you choose another.
+            {driveEnabled
+              ? "Upload from your device or Google Drive to Cloudflare R2."
+              : "Upload to Cloudflare R2."}{" "}
+            First image is primary unless you choose another.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => inputRef.current?.click()}
-          isLoading={isUploading}
-        >
-          Upload image
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => inputRef.current?.click()}
+            isLoading={isUploading}
+            disabled={isPickingFromDrive}
+          >
+            Upload image
+          </Button>
+          {driveEnabled ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void handleDriveImport()}
+              isLoading={isPickingFromDrive}
+              disabled={isUploading}
+            >
+              Google Drive
+            </Button>
+          ) : null}
+        </div>
         <input
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
           multiple
           className="hidden"
-          onChange={(event) => void handleFiles(event.target.files)}
+          onChange={(event) =>
+            void handleFiles(Array.from(event.target.files ?? []))
+          }
         />
       </div>
 
